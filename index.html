@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fe XIII Stokes Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500&family=Fira+Sans+Condensed:wght@500;600&family=Fira+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,500;1,400;1,500&display=swap">
+<style>
+/* Layout: an observatory console. A dark sky viewport with the field geometry sits over the
+   instrument dials on the left; the spectrograph read-out (four Stokes panels and a line table)
+   fills the right. Math symbols are set in a journal math face, as in the paper. */
+:root {
+  --bg: #edf0f4;
+  --surface: #fbfcfd;
+  --surface-2: #f2f4f7;
+  --ink: #111823;
+  --ink-2: #475264;
+  --ink-3: #737d8e;
+  --rule: #dce1e8;
+  --axis: #b9c0cb;
+  --accent: #c2255c;
+  --accent-soft: rgba(194, 37, 92, 0.10);
+  --on-accent: #ffffff;
+  --s1074: #2a78d6;
+  --s1079: #eb6834;
+  --shadow: 0 1px 2px rgba(15, 23, 36, 0.06), 0 10px 28px -20px rgba(15, 23, 36, 0.45);
+  /* the sky viewport is dark in both themes */
+  --space: #05080f;
+  --space-glow: #0f1a33;
+  --space-ink: #e3e9f2;
+  --space-ink-2: #97a3b6;
+  --space-rule: rgba(255, 255, 255, 0.10);
+  --space-panel: rgba(8, 12, 22, 0.72);
+  --v-b: #ff4f9a;
+  --v-bp: #ff9cc6;
+  --v-r: #ffc145;
+  --v-los: #3ee0c5;
+  --v-ref: #e8ecf2;
+  --v-1074: #3987e5;
+  --v-1079: #d95926;
+  --st-good: #0ca30c;
+  --st-warn: #fab219;
+  --st-crit: #d03b3b;
+
+  --font-ui: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-label: "Fira Sans Condensed", "Fira Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-math: "STIX Two Text", "STIX Two Math", "Cambria Math", "Times New Roman", serif;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #090c12;
+    --surface: #10151d;
+    --surface-2: #0c1118;
+    --ink: #e7ebf1;
+    --ink-2: #a9b2c0;
+    --ink-3: #7c8697;
+    --rule: #1f2733;
+    --axis: #343e4d;
+    --accent: #f06595;
+    --accent-soft: rgba(240, 101, 149, 0.14);
+    --on-accent: #1c0711;
+    --s1074: #3987e5;
+    --s1079: #d95926;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -20px rgba(0, 0, 0, 0.9);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #090c12;
+  --surface: #10151d;
+  --surface-2: #0c1118;
+  --ink: #e7ebf1;
+  --ink-2: #a9b2c0;
+  --ink-3: #7c8697;
+  --rule: #1f2733;
+  --axis: #343e4d;
+  --accent: #f06595;
+  --accent-soft: rgba(240, 101, 149, 0.14);
+  --on-accent: #1c0711;
+  --s1074: #3987e5;
+  --s1079: #d95926;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -20px rgba(0, 0, 0, 0.9);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 14px/1.5 var(--font-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 40px;
+}
+.shell { max-width: 1580px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.m { font-family: var(--font-math); font-style: italic; font-size: 1.08em; letter-spacing: 0; }
+.m.up { font-style: normal; }
+sub, sup { line-height: 0; }
+
+/* ---------- masthead ---------- */
+.masthead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 28px; }
+.masthead .titles { min-width: 0; max-width: 78ch; }
+.eyebrow { font: 600 11.5px/1.2 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+h1 { font: 500 clamp(26px, 3.2vw, 34px)/1.08 var(--font-math); margin: 6px 0 8px; text-wrap: balance; }
+.lede { margin: 0; color: var(--ink-2); max-width: 70ch; }
+.provenance { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font: 500 12px/1 var(--font-label); letter-spacing: 0.03em; padding: 7px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+
+/* ---------- layout ---------- */
+.app { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 1100px) { .app { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+/* ---------- sky viewport ---------- */
+.sky { background: var(--space); color: var(--space-ink); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.viewport { position: relative; height: clamp(340px, 58vh, 640px); background: radial-gradient(120% 90% at 72% 8%, var(--space-glow) 0%, var(--space) 60%); touch-action: none; }
+.viewport > canvas { display: block; width: 100%; height: 100%; outline: none; }
+.label-layer { position: absolute; inset: 0; pointer-events: none; }
+.hud { position: absolute; z-index: 3; }
+.hud-tl { top: 12px; left: 12px; }
+.hud-tr { top: 12px; right: 12px; }
+.hud-bl { bottom: 12px; left: 12px; }
+.angles { display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 3px; align-items: baseline; padding: 10px 12px; border-radius: 10px; background: var(--space-panel); border: 1px solid var(--space-rule); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.angles .k { display: flex; align-items: baseline; gap: 7px; font-size: 15px; }
+.angles .k i.key { width: 14px; height: 3px; border-radius: 2px; display: inline-block; align-self: center; }
+.angles .v { font: 500 13px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--space-ink); }
+.angles .d { grid-column: 1 / -1; font: 400 11px/1.25 var(--font-ui); color: var(--space-ink-2); margin: -1px 0 4px 21px; }
+.angles .d:last-child { margin-bottom: 0; }
+.views { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--space-panel); border: 1px solid var(--space-rule); }
+.views button { font: 500 12px/1 var(--font-label); letter-spacing: 0.04em; color: var(--space-ink-2); background: transparent; border: 0; padding: 8px 10px; border-radius: 7px; cursor: pointer; }
+.views button:hover { color: var(--space-ink); background: var(--space-rule); }
+.views button[aria-pressed="true"] { color: var(--space-ink); background: rgba(255, 255, 255, 0.16); }
+.views button:focus-visible { outline: 2px solid var(--v-b); outline-offset: 1px; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px 7px 9px; border-radius: 999px; background: var(--space-panel); border: 1px solid var(--space-rule); font: 500 12.5px/1.2 var(--font-ui); color: var(--space-ink); }
+.status svg { width: 15px; height: 15px; flex: none; }
+.status .sub { color: var(--space-ink-2); font-weight: 400; }
+.fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--space-ink-2); }
+.fallback p { max-width: 42ch; margin: 0; }
+.tag { font: italic 500 15px/1 var(--font-math); padding: 2px 5px; border-radius: 5px; background: rgba(5, 8, 15, 0.55); text-shadow: 0 0 6px var(--space); white-space: nowrap; }
+.tag sub { font-size: 0.7em; }
+.tag.small { font: 500 11px/1 var(--font-label); letter-spacing: 0.04em; font-style: normal; color: var(--space-ink-2); background: transparent; }
+.legend3d { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 11px 14px 12px; border-top: 1px solid var(--space-rule); font-size: 12.5px; color: var(--space-ink-2); list-style: none; margin: 0; }
+.legend3d li { display: inline-flex; align-items: center; gap: 7px; }
+.legend3d .sw { width: 18px; height: 3px; border-radius: 2px; flex: none; }
+.legend3d .sw.dash { background: repeating-linear-gradient(90deg, var(--v-bp) 0 4px, transparent 4px 7px) !important; }
+
+/* ---------- controls ---------- */
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+#fs-plasma { grid-column: 1 / -1; }
+.ctl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 24px; }
+@media (max-width: 640px) { .controls { grid-template-columns: minmax(0, 1fr); } }
+fieldset { margin: 0; padding: 14px 16px 14px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+legend { float: left; width: 100%; padding: 0; margin: 0 0 2px; font: 600 11.5px/1.2 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+legend + * { clear: both; }
+.ctl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.ctl label { font-size: 13px; color: var(--ink-2); display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.ctl label .m { color: var(--ink); }
+.num { display: inline-flex; align-items: baseline; gap: 3px; font: 500 13px/1 var(--font-mono); color: var(--ink); }
+.num input { width: 5.2em; font: inherit; color: inherit; text-align: right; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 5px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.num input:hover { border-color: var(--rule); }
+.num input:focus-visible { outline: none; border-color: var(--accent); background: var(--surface-2); }
+.num input::-webkit-inner-spin-button, .num input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.num .u { color: var(--ink-3); font: 400 12px/1 var(--font-ui); }
+input[type="range"] { grid-column: 1 / -1; -webkit-appearance: none; appearance: none; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; --pct: 50%; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) 0 var(--pct), var(--rule) var(--pct) 100%); }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--rule); }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); transition: transform 0.12s ease; }
+input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); }
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
+input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.presets .lab { width: 100%; font: 500 11px/1.2 var(--font-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.btn { font: 500 12.5px/1 var(--font-ui); color: var(--ink); background: var(--surface-2); border: 1px solid var(--rule); border-radius: 999px; padding: 7px 11px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--rule); color: var(--ink-2); }
+.note { margin: 0; font-size: 12px; color: var(--ink-3); }
+
+/* ---------- spectra panel ---------- */
+.spectra { padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.spec-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.spec-head h2 { margin: 0; font: 500 21px/1.15 var(--font-math); }
+.spec-head p { margin: 2px 0 0; color: var(--ink-3); font-size: 12.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; margin: 0; padding: 0; font-size: 13px; color: var(--ink-2); }
+.legend li { display: inline-flex; align-items: center; gap: 8px; }
+.legend .sw { width: 20px; height: 2px; border-radius: 1px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.seg { display: inline-flex; align-items: center; gap: 8px; }
+.seg .lab { font: 500 11px/1.2 var(--font-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.seg .opts { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--rule); }
+.seg button { font: 500 12.5px/1 var(--font-ui); color: var(--ink-2); background: transparent; border: 0; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--rule), 0 1px 2px rgba(15, 23, 36, 0.08); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.check input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.plots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; transition: opacity 0.2s ease; }
+.plots.dim { opacity: 0.45; }
+@media (max-width: 560px) { .plots { grid-template-columns: minmax(0, 1fr); } }
+figure.plot { margin: 0; min-width: 0; }
+figure.plot figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--ink-2); margin: 0 0 2px 4px; }
+figure.plot figcaption strong { font: 600 13px/1.2 var(--font-ui); color: var(--ink); }
+figure.plot figcaption .u { color: var(--ink-3); font-size: 12px; }
+.plot-wrap { position: relative; height: 196px; }
+.plot-wrap canvas { display: block; width: 100%; height: 100%; border-radius: 8px; cursor: crosshair; }
+.plot-wrap canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tip { position: absolute; top: 8px; pointer-events: none; z-index: 2; min-width: 140px; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--rule); box-shadow: var(--shadow); font-size: 12px; color: var(--ink-2); }
+.tip .x { font: 500 11.5px/1.2 var(--font-mono); color: var(--ink-3); margin-bottom: 5px; }
+.tip .row { display: flex; align-items: center; gap: 8px; line-height: 1.5; }
+.tip .row i { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+.tip .row b { font: 600 12.5px/1.4 var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; min-width: 5.5em; }
+.banner { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--rule); color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+.banner svg { width: 15px; height: 15px; flex: none; }
+
+/* ---------- line table ---------- */
+.tablewrap { overflow-x: auto; }
+table.lines { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.lines th, table.lines td { padding: 7px 8px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.lines thead th { font: 600 12px/1.2 var(--font-ui); color: var(--ink); border-bottom-color: var(--axis); }
+table.lines thead th span.sw { display: inline-block; width: 14px; height: 2px; border-radius: 1px; vertical-align: middle; margin-right: 7px; }
+table.lines th[scope="row"] { text-align: left; font-weight: 400; color: var(--ink-2); white-space: normal; }
+table.lines td { font: 500 13px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+table.lines tr:last-child th, table.lines tr:last-child td { border-bottom: 0; }
+table.lines .unit { color: var(--ink-3); font: 400 11.5px/1 var(--font-ui); }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ---------- about ---------- */
+details.about { padding: 0; }
+details.about summary { cursor: pointer; padding: 14px 16px; font: 500 15px/1.3 var(--font-ui); color: var(--ink); list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+details.about summary::-webkit-details-marker { display: none; }
+details.about summary::after { content: "+"; font: 400 20px/1 var(--font-mono); color: var(--ink-3); }
+details.about[open] summary::after { content: "−"; }
+details.about summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+.about-body { padding: 0 16px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; color: var(--ink-2); }
+.about-body h3 { margin: 0 0 6px; font: 600 11.5px/1.2 var(--font-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.about-body p, .about-body ul { margin: 0 0 8px; max-width: 66ch; }
+.about-body ul { padding-left: 18px; }
+.about-body li { margin-bottom: 4px; }
+.about-body a { color: var(--accent); text-underline-offset: 2px; }
+.about-body a:hover { text-decoration-thickness: 2px; }
+.eq { font-family: var(--font-math); font-size: 15px; color: var(--ink); line-height: 1.8; overflow-x: auto; white-space: nowrap; }
+.err { padding: 16px; color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="masthead">
+    <div class="titles">
+      <p class="eyebrow">pyCELP forward synthesis · single coronal voxel</p>
+      <h1>Fe XIII Stokes Explorer</h1>
+      <p class="lede">Place a plasma voxel above the Sun, orient its magnetic field, and watch the polarized emission of Fe XIII 1074.6 nm and 1079.8 nm respond. Atomic level populations and alignments come from a pre-computed pyCELP table; the viewing geometry and the spectra are evaluated live in your browser.</p>
+    </div>
+    <div class="provenance" id="provenance" aria-label="Model details"></div>
+  </header>
+
+  <main class="app">
+    <section class="col" aria-label="Geometry">
+      <div class="sky">
+        <div class="viewport" id="viewport">
+          <div class="hud hud-tl">
+            <div class="angles" id="hud-angles" aria-live="polite">
+              <span class="k"><i class="key" style="background: var(--v-r)"></i><span class="m">θ<sub>B</sub></span></span><span class="v" id="hud-thetaB">–</span>
+              <span class="d">field vs. local vertical</span>
+              <span class="k"><i class="key" style="background: var(--v-los)"></i><span class="m">Θ<sub>B</sub></span></span><span class="v" id="hud-ThetaB">–</span>
+              <span class="d">field vs. line of sight</span>
+              <span class="k"><i class="key" style="background: var(--v-ref)"></i><span class="m">ψ<sub>B</sub></span></span><span class="v" id="hud-psiB">–</span>
+              <span class="d">projected field, counter-clockwise from +Q</span>
+              <span class="d" id="hud-gamma">pycelp azimuthBLOSdeg = 90° − ψB</span>
+            </div>
+          </div>
+          <div class="hud hud-tr">
+            <div class="views" role="group" aria-label="Camera view">
+              <button type="button" data-view="oblique" aria-pressed="true">3D</button>
+              <button type="button" data-view="observer" aria-pressed="false">Observer</button>
+              <button type="button" data-view="side" aria-pressed="false">Side</button>
+              <button type="button" data-view="top" aria-pressed="false">Top</button>
+            </div>
+          </div>
+          <div class="hud hud-bl"><div class="status" id="status" role="status"></div></div>
+          <div class="fallback" id="scene-fallback" hidden><p>The 3D view could not start (WebGL or the three.js library from cdn.jsdelivr.net is unavailable). The spectra on the right still update.</p></div>
+        </div>
+        <ul class="legend3d" aria-label="3D legend">
+          <li><span class="sw" style="background: var(--v-b)"></span><span><span class="m">B</span> field direction</span></li>
+          <li><span class="sw dash"></span><span><span class="m">B</span><sub>⊥</sub> on the plane of sky</span></li>
+          <li><span class="sw" style="background: var(--v-r)"></span><span>local vertical</span></li>
+          <li><span class="sw" style="background: var(--v-los)"></span><span>line of sight, to observer</span></li>
+          <li><span class="sw" style="background: var(--v-ref)"></span><span>+Q reference</span></li>
+          <li><span class="sw" style="background: var(--v-1074); height: 4px"></span><span>1074 polarization</span></li>
+          <li><span class="sw" style="background: var(--v-1079); height: 4px"></span><span>1079 polarization</span></li>
+        </ul>
+      </div>
+
+      <div class="controls">
+        <fieldset class="card" id="fs-voxel">
+          <legend>Plasma voxel</legend>
+          <div class="ctl">
+            <label for="height">Height <span class="m">h</span></label>
+            <span class="num"><input id="height-n" type="number" aria-label="Height in solar radii" inputmode="decimal"><span class="u">R<sub>☉</sub></span></span>
+            <input id="height" type="range" min="0.005" max="1.5" step="0.005">
+          </div>
+          <div class="ctl">
+            <label for="lat">Latitude</label>
+            <span class="num"><input id="lat-n" type="number" aria-label="Latitude in degrees" inputmode="decimal"><span class="u">°</span></span>
+            <input id="lat" type="range" min="-90" max="90" step="0.5">
+          </div>
+          <div class="ctl">
+            <label for="lon">Longitude from central meridian</label>
+            <span class="num"><input id="lon-n" type="number" aria-label="Longitude in degrees" inputmode="decimal"><span class="u">°</span></span>
+            <input id="lon" type="range" min="-180" max="180" step="0.5">
+          </div>
+          <div class="presets" role="group" aria-label="Voxel position presets">
+            <span class="lab">Place at</span>
+            <button type="button" class="btn" data-place="west">West limb</button>
+            <button type="button" class="btn" data-place="east">East limb</button>
+            <button type="button" class="btn" data-place="north">North pole</button>
+            <button type="button" class="btn" data-place="front">In front, lon −40°</button>
+          </div>
+          <p class="note">Longitude ±90° puts the voxel in the plane of the sky; positive is west.</p>
+        </fieldset>
+
+        <fieldset class="card" id="fs-field">
+          <legend>Magnetic field</legend>
+          <div class="ctl">
+            <label for="B">Strength <span class="m">|B|</span></label>
+            <span class="num"><input id="B-n" type="number" aria-label="Field strength in gauss" inputmode="decimal"><span class="u">G</span></span>
+            <input id="B" type="range" min="0" max="100" step="0.5">
+          </div>
+          <div class="ctl">
+            <label for="inc">Inclination <span class="m">θ<sub>B</sub></span> from vertical</label>
+            <span class="num"><input id="inc-n" type="number" aria-label="Inclination from the local vertical in degrees" inputmode="decimal"><span class="u">°</span></span>
+            <input id="inc" type="range" min="0" max="180" step="0.5">
+          </div>
+          <div class="ctl">
+            <label for="azi">Azimuth <span class="m">φ<sub>B</sub></span>, north → west</label>
+            <span class="num"><input id="azi-n" type="number" aria-label="Azimuth from local north towards west in degrees" inputmode="decimal"><span class="u">°</span></span>
+            <input id="azi" type="range" min="-180" max="180" step="0.5">
+          </div>
+          <div class="presets" role="group" aria-label="Field presets">
+            <span class="lab">Set field</span>
+            <button type="button" class="btn" data-field="radial">Radial</button>
+            <button type="button" class="btn" data-field="vanvleck" title="θB = 54.74°: atomic alignment vanishes">Van Vleck</button>
+            <button type="button" class="btn" data-field="los" title="Field along the line of sight, towards the observer">Along LOS</button>
+            <button type="button" class="btn" data-field="reverse" title="B → −B: same I, Q, U; Stokes V changes sign">Reverse B</button>
+            <button type="button" class="btn" data-field="mirror" title="Reflect B across the plane holding the local vertical and the LOS: θB and ΘB unchanged, ψB → −ψB in the radial frame">Mirror</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="card" id="fs-plasma">
+          <legend>Plasma</legend>
+          <div class="ctl-grid">
+          <div class="ctl">
+            <label for="logNe">Density log<sub>10</sub> <span class="m">n</span><sub>e</sub></label>
+            <span class="num"><input id="logNe-n" type="number" aria-label="log10 electron density per cubic centimetre" inputmode="decimal"><span class="u">[cm<sup>−3</sup>]</span></span>
+            <input id="logNe" type="range" min="7" max="10" step="0.05">
+          </div>
+          <div class="ctl">
+            <label for="vnt">Non-thermal velocity</label>
+            <span class="num"><input id="vnt-n" type="number" aria-label="Non-thermal velocity in km/s" inputmode="decimal"><span class="u">km/s</span></span>
+            <input id="vnt" type="range" min="0" max="50" step="0.5">
+          </div>
+          <div class="ctl">
+            <label for="vdop">Doppler velocity (+ red)</label>
+            <span class="num"><input id="vdop-n" type="number" aria-label="Line-of-sight Doppler velocity in km/s" inputmode="decimal"><span class="u">km/s</span></span>
+            <input id="vdop" type="range" min="-50" max="50" step="0.5">
+          </div>
+          </div>
+          <p class="note" id="te-note"></p>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="col" aria-label="Spectra">
+      <div class="card spectra">
+        <div class="spec-head">
+          <div>
+            <h2>Stokes profiles</h2>
+            <p id="scale-note">Each line divided by its own Stokes I peak</p>
+          </div>
+          <ul class="legend" aria-label="Spectral lines">
+            <li><span class="sw" style="background: var(--s1074)"></span>Fe XIII 1074.6 nm</li>
+            <li><span class="sw" style="background: var(--s1079)"></span>Fe XIII 1079.8 nm</li>
+          </ul>
+        </div>
+        <div class="toolbar">
+          <div class="seg">
+            <span class="lab" id="lab-norm">Scale by</span>
+            <span class="opts" role="group" aria-labelledby="lab-norm">
+              <button type="button" data-norm="own" aria-pressed="true">Own I peak</button>
+              <button type="button" data-norm="1074" aria-pressed="false">1074 I peak</button>
+            </span>
+          </div>
+          <div class="seg">
+            <span class="lab" id="lab-ref">+Q reference</span>
+            <span class="opts" role="group" aria-labelledby="lab-ref">
+              <button type="button" data-ref="radial" aria-pressed="true">Radial</button>
+              <button type="button" data-ref="north" aria-pressed="false">Solar north</button>
+            </span>
+          </div>
+          <label class="check"><input type="checkbox" id="lock"> Lock y-axes</label>
+        </div>
+        <p class="banner" id="banner" hidden></p>
+        <div class="plots" id="plots"></div>
+        <div class="foot">
+          <p class="note">Hover or focus a panel and use ← → to read values. Q and U follow the selected reference; V uses the derivative of the profile.</p>
+          <button type="button" class="btn" id="copy">Copy spectra as CSV</button>
+        </div>
+      </div>
+
+      <div class="card spectra">
+        <div class="tablewrap">
+          <table class="lines" id="line-table">
+            <thead>
+              <tr><th scope="col" style="text-align:left">Per line</th>
+                <th scope="col"><span class="sw" style="background: var(--s1074)"></span>1074.6 nm</th>
+                <th scope="col"><span class="sw" style="background: var(--s1079)"></span>1079.8 nm</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Upper-level alignment <span class="m">σ</span><sup>2</sup><sub>0</sub></th><td data-k="sigma" data-l="0"></td><td data-k="sigma" data-l="1"></td></tr>
+              <tr><th scope="row">Line-integrated <span class="m">ε</span><sub>I</sub> <span class="unit">photons cm<sup>−3</sup> s<sup>−1</sup> arcsec<sup>−2</sup></span></th><td data-k="epsI" data-l="0"></td><td data-k="epsI" data-l="1"></td></tr>
+              <tr><th scope="row">Intensity relative to 1074</th><td data-k="ratio" data-l="0"></td><td data-k="ratio" data-l="1"></td></tr>
+              <tr><th scope="row">Linear polarization <span class="m">L</span>/<span class="m">I</span></th><td data-k="LI" data-l="0"></td><td data-k="LI" data-l="1"></td></tr>
+              <tr><th scope="row"><span class="m">Q</span>/<span class="m">I</span> · <span class="m">U</span>/<span class="m">I</span></th><td data-k="QU" data-l="0"></td><td data-k="QU" data-l="1"></td></tr>
+              <tr><th scope="row">Polarization angle from +Q reference</th><td data-k="chi" data-l="0"></td><td data-k="chi" data-l="1"></td></tr>
+              <tr><th scope="row">Largest |<span class="m">V</span>| / <span class="m">I</span><sub>peak</sub> (signed)</th><td data-k="V" data-l="0"></td><td data-k="V" data-l="1"></td></tr>
+              <tr><th scope="row">Doppler width <span class="m">σ</span><sub>λ</sub></th><td data-k="width" data-l="0"></td><td data-k="width" data-l="1"></td></tr>
+              <tr><th scope="row">Effective Landé factor <span class="m">ḡ</span> · <span class="m">D</span> · <span class="m">E</span></th><td data-k="atomic" data-l="0"></td><td data-k="atomic" data-l="1"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <details class="card about" id="about">
+        <summary>How the page computes the profiles</summary>
+        <div class="about-body">
+          <div>
+            <h3>What is pre-computed</h3>
+            <p>For each line, the polarized emission needs two numbers from the statistical equilibrium: the population term <span class="m">C</span> = (<span class="m">hν</span>/4π) <span class="m">A</span> <span class="m">N</span><sub>u</sub> and the upper-level alignment <span class="m">σ</span><sup>2</sup><sub>0</sub> = <span class="m">ρ</span><sup>2</sup><sub>0</sub>/<span class="m">ρ</span><sup>0</sup><sub>0</sub>. pyCELP's <code>Ion.calc_rho_sym</code> gives both as functions of <span class="m">n</span><sub>e</sub>, <span class="m">T</span><sub>e</sub>, height and <span class="m">θ</span><sub>B</sub>.</p>
+            <p id="about-grid"></p>
+          </div>
+          <div>
+            <h3>Degeneracies that keep the table small</h3>
+            <ul>
+              <li>The radiation-field anisotropy enters as P<sub>2</sub>(cos <span class="m">θ</span><sub>B</sub>), so only cos²<span class="m">θ</span><sub>B</sub> matters: <span class="m">θ</span><sub>B</sub> and 180° − <span class="m">θ</span><sub>B</sub> are identical, and 11 nodes in cos²<span class="m">θ</span><sub>B</sub> interpolate almost exactly.</li>
+              <li>|<span class="m">B</span>|, the line of sight and the Q/U reference never enter the statistical equilibrium (no atomic coherences, saturated Hanle regime). Moving the voxel around the Sun at fixed height and inclination reuses the same entry.</li>
+              <li><b>Reverse B</b> flips only Stokes V. <b>Mirror</b> keeps <span class="m">θ</span><sub>B</sub> and <span class="m">Θ</span><sub>B</sub> and flips <span class="m">ψ</span><sub>B</sub>, which flips U in the radial frame.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Emission coefficients (Schad &amp; Dima 2020, Eqs. 3, 6–8)</h3>
+            <div class="eq"><i>ε</i><sub>I</sub> = <i>C</i> [1 + <sup>3</sup>⁄<sub>2√2</sub> <i>D σ</i><sup>2</sup><sub>0</sub> (cos²<i>Θ</i><sub>B</sub> − ⅓)] <i>φ</i>(λ)</div>
+            <div class="eq"><i>ε</i><sub>Q′</sub> = <i>C</i> <sup>3</sup>⁄<sub>2√2</sub> <i>D σ</i><sup>2</sup><sub>0</sub> sin²<i>Θ</i><sub>B</sub> <i>φ</i>(λ)</div>
+            <div class="eq"><i>ε</i><sub>Q</sub> = −<i>ε</i><sub>Q′</sub> cos 2<i>ψ</i><sub>B</sub>,&nbsp; <i>ε</i><sub>U</sub> = −<i>ε</i><sub>Q′</sub> sin 2<i>ψ</i><sub>B</sub></div>
+            <div class="eq"><i>ε</i><sub>V</sub> = −(λ²/<i>c</i>) <i>C</i> cos <i>Θ</i><sub>B</sub> <i>ν</i><sub>L</sub> (<i>ḡ</i> + <i>E σ</i><sup>2</sup><sub>0</sub>) <i>φ</i>′(λ)</div>
+            <p><span class="m">ε</span><sub>Q′</sub> = <span class="m">I</span>(⊥<span class="m">B</span><sub>⊥</sub>) − <span class="m">I</span>(∥<span class="m">B</span><sub>⊥</sub>): with <span class="m">σ</span><sup>2</sup><sub>0</sub> &gt; 0 the angular pattern of <span class="m">ε</span><sub>I</sub> is that of the σ components, which emit polarization perpendicular to the field. pyCELP writes <span class="m">ε</span><sub>Q</sub> = <span class="m">ε</span><sub>Q′</sub> cos 2<span class="m">γ</span><sub>B</sub>, <span class="m">ε</span><sub>U</sub> = −<span class="m">ε</span><sub>Q′</sub> sin 2<span class="m">γ</span><sub>B</sub>, so the page passes <code>azimuthBLOSdeg</code> = <span class="m">γ</span><sub>B</sub> = 90° − <span class="m">ψ</span><sub>B</sub>.</p>
+            <p>The profile <span class="m">φ</span> is a Gaussian with thermal width at <span class="m">T</span><sub>e</sub> plus the non-thermal velocity, as in <code>emissionLine.calc_stokesSpec</code>. The browser code is a line-by-line port of pyCELP and matches it to 10<sup>−6</sup>.</p>
+          </div>
+          <div>
+            <h3>Conventions and limits</h3>
+            <ul>
+              <li>+x points to the observer, +z is solar north, +y is solar west. The line of sight is taken parallel to +x.</li>
+              <li><span class="m">ψ</span><sub>B</sub> is the counter-clockwise rotation, as seen by the observer, from the +Q reference to the plane-of-sky field. The polarization angle χ = ½ atan2(U, Q) is measured the same way (IAU sense).</li>
+              <li>Radial reference: Q &lt; 0 means polarization tangential to the limb. Solar north: a fixed frame for all positions, angles measured north through east.</li>
+              <li>The profiles are emission coefficients of one voxel, not line-of-sight integrals. Occultation and the disk background are not applied to the spectra.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Credits</h3>
+            <ul>
+              <li>Statistical equilibrium and emission coefficients from <a href="https://github.com/tschad/pycelp" target="_blank" rel="noopener">pyCELP</a> by T. Schad, described in <a href="https://doi.org/10.1007/s11207-020-01669-1" target="_blank" rel="noopener">Schad &amp; Dima (2020), Solar Phys. 295, 98</a>. The browser model is a port of pyCELP code under its BSD 3-clause licence (<a href="LICENSE-pycelp.txt">notice</a>).</li>
+              <li>Atomic data from <a href="https://www.chiantidatabase.org" target="_blank" rel="noopener">CHIANTI</a> 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).</li>
+              <li>3D view drawn with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>.</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </section>
+  </main>
+</div>
+
+<script src="fe13_see_table.js"></script>
+<script src="stokes_model.js"></script>
+<script>
+(function () {
+  "use strict";
+  const SM = window.StokesModel;
+  const plotsEl = document.getElementById("plots");
+  if (!window.FE13_SEE_TABLE || !SM) {
+    plotsEl.innerHTML = '<p class="err">The data files <code>fe13_see_table.js</code> and <code>stokes_model.js</code> did not load. Keep them in the same folder as this page.</p>';
+    return;
+  }
+  const model = SM.createModel(window.FE13_SEE_TABLE);
+  const DEG = SM.DEG;
+  const meta = model.meta || {};
+
+  // ---------- state ----------
+  const DEFAULTS = { height: 0.2, lat: 25, lon: 90, B: 20, inc: 30, azi: -60, logNe: 8.5, vnt: 25, vdop: 0, ref: "radial", norm: "own", lock: false };
+  const state = Object.assign({}, DEFAULTS);
+  const SLIDERS = {
+    height: { dec: 3 }, lat: { dec: 1 }, lon: { dec: 1 }, B: { dec: 1 }, inc: { dec: 1 }, azi: { dec: 1 },
+    logNe: { dec: 2 }, vnt: { dec: 1 }, vdop: { dec: 1 },
+  };
+  const NPTS = 241;
+  let last = null;           // last compute result
+  let dlam = null;
+  let hoverIdx = -1;
+  let locked = null;         // locked y ranges
+
+  // ---------- provenance ----------
+  const TeMK = model.Te / 1e6;
+  const prov = document.getElementById("provenance");
+  [
+    (meta.nlevels ? meta.nlevels + "-level Fe XIII atom" : "Fe XIII atom"),
+    "CHIANTI " + (meta.chianti_version || ""),
+    "Tₑ = " + TeMK.toFixed(2) + " MK",
+    "pyCELP " + (meta.pycelp_commit || ""),
+  ].forEach(function (t) { const s = document.createElement("span"); s.className = "pill"; s.textContent = t.trim(); prov.appendChild(s); });
+  document.getElementById("te-note").textContent =
+    "Electron temperature is fixed at " + TeMK.toFixed(2) + " MK (log Tₑ = " + (meta.log10_Te || Math.log10(model.Te)).toFixed(2) +
+    "), protons at 0.85 nₑ, limb darkening on.";
+  (function aboutGrid() {
+    const g = model.grid, hc = model.limits.height, ic = meta.interpolation_check || {};
+    const e74 = ic["1074"], e79 = ic["1079"];
+    let s = "The table holds " + g.log10_ne.n + " densities (log nₑ " + model.limits.logNe[0] + "–" + model.limits.logNe[1] + ") × " +
+      g.log10_h.n + " heights (" + hc[0].toFixed(3) + "–" + hc[1].toFixed(1) + " R☉, log-spaced) × " + g.mu2.n + " values of cos²θB, from the " +
+      (meta.nlevels || "") + "-level CHIANTI " + (meta.chianti_version || "") + " model with " + (meta.abundance_file || "") + ". ";
+    if (e74 && e79) {
+      s += "Against direct pyCELP solutions at random off-grid points, interpolation errors are below " +
+        (100 * Math.max(e74.max_rel_err_C, e79.max_rel_err_C)).toFixed(2) + "% in C and " +
+        Math.max(e74.max_abs_err_sigma, e79.max_abs_err_sigma).toExponential(1) + " in σ.";
+    }
+    document.getElementById("about-grid").textContent = s;
+  })();
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+  function sci(v, d) {
+    if (!isFinite(v) || v === 0) return "0";
+    const e = Math.floor(Math.log10(Math.abs(v)));
+    const m = v / Math.pow(10, e);
+    return m.toFixed(d) + " × 10" + String(e).split("").map((c) => SUP[c] || c).join("");
+  }
+  function signed(v, d) { const s = v.toFixed(d); return (v > 0 && Number(s) !== 0 ? "+" : "") + s.replace("-", "−"); }
+  function pct(v, d) { return signed(100 * v, d) + "%"; }
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function smart(v) {           // 3 significant digits for tooltip values
+    if (v === 0) return "0";
+    const a = Math.abs(v);
+    const d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : Math.min(6, 2 - Math.floor(Math.log10(a)));
+    return signed(v, d);
+  }
+
+  // ---------- sliders ----------
+  function setFill(r) {
+    const p = (Number(r.value) - Number(r.min)) / (Number(r.max) - Number(r.min)) * 100;
+    r.style.setProperty("--pct", p + "%");
+  }
+  function syncControls() {
+    Object.keys(SLIDERS).forEach(function (k) {
+      const r = $(k), n = $(k + "-n");
+      r.value = state[k];
+      setFill(r);
+      if (document.activeElement !== n) n.value = Number(state[k]).toFixed(SLIDERS[k].dec);
+    });
+  }
+  Object.keys(SLIDERS).forEach(function (k) {
+    const r = $(k), n = $(k + "-n");
+    n.min = r.min; n.max = r.max; n.step = "any";
+    r.addEventListener("input", function () { state[k] = Number(r.value); setFill(r); n.value = state[k].toFixed(SLIDERS[k].dec); schedule(); });
+    n.addEventListener("change", function () {
+      let v = Number(n.value);
+      if (!isFinite(v)) v = state[k];
+      v = Math.min(Math.max(v, Number(r.min)), Number(r.max));
+      state[k] = v; syncControls(); schedule();
+    });
+    n.addEventListener("keydown", function (e) { if (e.key === "Enter") n.blur(); });
+  });
+
+  // ---------- presets ----------
+  document.querySelectorAll("[data-place]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      const p = b.dataset.place;
+      if (p === "west") { state.lat = 0; state.lon = 90; }
+      else if (p === "east") { state.lat = 0; state.lon = -90; }
+      else if (p === "north") { state.lat = 90; state.lon = 90; }
+      else if (p === "front") { state.lat = 20; state.lon = -40; }
+      syncControls(); schedule();
+    });
+  });
+  function setFieldFromVector(v) {
+    const f = SM.localFrame(state.lat, state.lon);
+    const a = SM.localAngles(f, v);
+    state.inc = Math.round(a.inc * 100) / 100;
+    state.azi = Math.round(a.azi * 100) / 100;
+  }
+  document.querySelectorAll("[data-field]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      const p = b.dataset.field;
+      const f = SM.localFrame(state.lat, state.lon);
+      const bv = SM.fieldVector(f, state.inc, state.azi);
+      if (p === "radial") { state.inc = 0; }
+      else if (p === "vanvleck") { state.inc = Math.round(SM.VAN_VLECK * 100) / 100; }
+      else if (p === "los") { setFieldFromVector([1, 0, 0]); }
+      else if (p === "reverse") { setFieldFromVector(SM.vec.scale(bv, -1)); }
+      else if (p === "mirror") {
+        const n = SM.vec.cross(f.r, [1, 0, 0]);
+        const nn = SM.vec.norm(n);
+        if (nn > 1e-9) {
+          const u = SM.vec.scale(n, 1 / nn);
+          setFieldFromVector(SM.vec.sub(bv, SM.vec.scale(u, 2 * SM.vec.dot(bv, u))));
+        }
+      }
+      syncControls(); schedule();
+    });
+  });
+
+  // ---------- segmented controls ----------
+  function bindSeg(attr, key) {
+    document.querySelectorAll("[data-" + attr + "]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state[key] = b.dataset[attr];
+        document.querySelectorAll("[data-" + attr + "]").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+        schedule();
+      });
+    });
+  }
+  bindSeg("norm", "norm");
+  bindSeg("ref", "ref");
+  $("lock").addEventListener("change", function (e) { state.lock = e.target.checked; locked = null; schedule(); });
+
+  // ---------- plots ----------
+  const PANELS = [
+    { key: "I", title: "Stokes I", unit: "÷ I peak", pct: false },
+    { key: "Q", title: "Stokes Q", unit: "% of I peak", pct: true },
+    { key: "U", title: "Stokes U", unit: "% of I peak", pct: true },
+    { key: "V", title: "Stokes V", unit: "% of I peak", pct: true },
+  ];
+  PANELS.forEach(function (p, i) {
+    const fig = document.createElement("figure");
+    fig.className = "plot";
+    const cap = document.createElement("figcaption");
+    const t = document.createElement("strong"); t.textContent = p.title;
+    const u = document.createElement("span"); u.className = "u"; u.textContent = p.unit;
+    cap.append(t, u);
+    const wrap = document.createElement("div"); wrap.className = "plot-wrap";
+    const cv = document.createElement("canvas");
+    cv.tabIndex = 0;
+    cv.setAttribute("role", "img");
+    cv.setAttribute("aria-label", p.title + " profiles of both lines; use left and right arrow keys to read values");
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true;
+    wrap.append(cv, tip);
+    fig.append(cap, wrap);
+    plotsEl.appendChild(fig);
+    p.canvas = cv; p.tip = tip; p.wrap = wrap;
+    cv.addEventListener("pointermove", function (e) { const r = cv.getBoundingClientRect(); setHover(xToIndex(e.clientX - r.left, r.width), i); });
+    cv.addEventListener("pointerleave", function () { setHover(-1, -1); });
+    cv.addEventListener("focus", function () { setHover(hoverIdx >= 0 ? hoverIdx : Math.floor(NPTS / 2), i); });
+    cv.addEventListener("blur", function () { setHover(-1, -1); });
+    cv.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      setHover(Math.min(NPTS - 1, Math.max(0, (hoverIdx < 0 ? NPTS >> 1 : hoverIdx) + (e.key === "ArrowRight" ? step : -step))), i);
+    });
+  });
+  const M = { l: 50, r: 10, t: 8, b: 26 };
+  let hoverPanel = -1;
+  function xToIndex(px, w) {
+    const f = (px - M.l) / (w - M.l - M.r);
+    if (f < -0.02 || f > 1.02) return -1;
+    return Math.round(Math.min(1, Math.max(0, f)) * (NPTS - 1));
+  }
+  function setHover(i, panel) { hoverIdx = i; hoverPanel = panel; drawPlots(); }
+
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  function decimalsFor(step) {
+    const e = Math.floor(Math.log10(step) + 1e-9);
+    return Math.max(0, -e + (Math.abs(step / Math.pow(10, e) - 2.5) < 1e-6 ? 1 : 0));
+  }
+  function tickLabel(v, step) {
+    if (Math.abs(v) < step * 1e-6) return "0";
+    return v.toFixed(decimalsFor(step)).replace("-", "−");
+  }
+
+  function seriesFor(p) {
+    const out = [];
+    const ref = last.lines[0].Ipeak;
+    last.lines.forEach(function (ln, n) {
+      const div = state.norm === "own" ? ln.Ipeak : ref;
+      const f = (p.pct ? 100 : 1) / div;
+      const src = ln.prof[p.key];
+      const y = new Float64Array(src.length);
+      for (let i = 0; i < src.length; i++) y[i] = src[i] * f;
+      out.push({ y: y, color: n === 0 ? "--s1074" : "--s1079", name: n === 0 ? "1074.6 nm" : "1079.8 nm" });
+    });
+    return out;
+  }
+  function rangeFor(p, series) {
+    let mx = 0;
+    series.forEach((s) => { for (let i = 0; i < s.y.length; i++) mx = Math.max(mx, Math.abs(s.y[i])); });
+    if (p.key === "I") { const top = Math.max(1, mx); const st = niceStep(top / 4); return { lo: 0, hi: Math.ceil(top * 1.06 / st) * st, step: st }; }
+    const floor = p.key === "V" ? 1e-3 : 1e-2;
+    const m = Math.max(mx * 1.1, floor);
+    const st = niceStep(m / 2);
+    const hi = Math.ceil(m / st) * st;
+    return { lo: -hi, hi: hi, step: st };
+  }
+
+  function drawPlots() {
+    if (!last) return;
+    const ink2 = cssVar("--ink-2"), ink3 = cssVar("--ink-3"), rule = cssVar("--rule"), axis = cssVar("--axis"), surface = cssVar("--surface");
+    const fontMono = "11px " + cssVar("--font-mono");
+    const x0 = dlam[0], x1 = dlam[dlam.length - 1];
+    if (state.lock && !locked) locked = {};
+    PANELS.forEach(function (p, pi) {
+      const cv = p.canvas;
+      const w = cv.clientWidth, h = cv.clientHeight;
+      if (!w || !h) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      const ctx = cv.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const series = seriesFor(p);
+      let R = rangeFor(p, series);
+      if (state.lock) { if (locked[p.key]) R = locked[p.key]; else locked[p.key] = R; }
+      const pw = w - M.l - M.r, ph = h - M.t - M.b;
+      const X = (x) => M.l + (x - x0) / (x1 - x0) * pw;
+      const Y = (y) => M.t + (1 - (y - R.lo) / (R.hi - R.lo)) * ph;
+      // grid + y ticks
+      ctx.font = fontMono; ctx.textBaseline = "middle"; ctx.textAlign = "right";
+      ctx.lineWidth = 1;
+      for (let v = R.lo; v <= R.hi + R.step * 1e-6; v += R.step) {
+        const yy = Math.round(Y(v)) + 0.5;
+        ctx.strokeStyle = Math.abs(v) < R.step * 1e-6 ? axis : rule;
+        ctx.beginPath(); ctx.moveTo(M.l, yy); ctx.lineTo(w - M.r, yy); ctx.stroke();
+        ctx.fillStyle = ink3; ctx.fillText(tickLabel(v, R.step), M.l - 7, yy);
+      }
+      // x ticks
+      const xs = niceStep((x1 - x0) / 5);
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      for (let v = Math.ceil(x0 / xs) * xs; v <= x1 + 1e-9; v += xs) {
+        const xx = Math.round(X(v)) + 0.5;
+        ctx.strokeStyle = Math.abs(v) < 1e-9 ? axis : rule;
+        ctx.beginPath(); ctx.moveTo(xx, M.t); ctx.lineTo(xx, M.t + ph); ctx.stroke();
+        ctx.fillStyle = ink3; ctx.fillText(tickLabel(v, xs), xx, M.t + ph + 6);
+      }
+      if (pi >= 2) {
+        ctx.fillStyle = ink2; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+        ctx.font = "11.5px " + cssVar("--font-ui");
+        ctx.fillText("λ − λ₀ (Å)", w - M.r, h - 1);
+      }
+      // series
+      ctx.save();
+      ctx.beginPath(); ctx.rect(M.l, M.t - 2, pw, ph + 4); ctx.clip();
+      ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      for (let s = series.length - 1; s >= 0; s--) {
+        const ys = series[s].y;
+        ctx.strokeStyle = cssVar(series[s].color);
+        ctx.beginPath();
+        for (let i = 0; i < ys.length; i++) { const xx = X(dlam[i]), yy = Y(ys[i]); if (i) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); }
+        ctx.stroke();
+      }
+      ctx.restore();
+      // crosshair
+      if (hoverIdx >= 0) {
+        const xx = Math.round(X(dlam[hoverIdx])) + 0.5;
+        ctx.strokeStyle = ink3; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(xx, M.t); ctx.lineTo(xx, M.t + ph); ctx.stroke();
+        series.forEach(function (s) {
+          const yy = Y(s.y[hoverIdx]);
+          if (yy < M.t - 2 || yy > M.t + ph + 2) return;
+          ctx.beginPath(); ctx.arc(X(dlam[hoverIdx]), yy, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = cssVar(s.color); ctx.fill();
+          ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+        });
+      }
+      // tooltip
+      const tip = p.tip;
+      if (hoverIdx >= 0 && hoverPanel === pi) {
+        tip.textContent = "";
+        const hx = document.createElement("div"); hx.className = "x";
+        hx.textContent = "λ − λ₀ = " + signed(dlam[hoverIdx], 2) + " Å";
+        tip.appendChild(hx);
+        series.forEach(function (s) {
+          const row = document.createElement("div"); row.className = "row";
+          const key = document.createElement("i"); key.style.background = cssVar(s.color);
+          const val = document.createElement("b"); val.textContent = smart(s.y[hoverIdx]) + (p.pct ? "%" : "");
+          const nm = document.createElement("span"); nm.textContent = s.name;
+          row.append(key, val, nm); tip.appendChild(row);
+        });
+        tip.hidden = false;
+        const xx = X(dlam[hoverIdx]);
+        const tw = tip.offsetWidth;
+        tip.style.left = (xx + 14 + tw > w ? Math.max(4, xx - 14 - tw) : xx + 14) + "px";
+      } else {
+        tip.hidden = true;
+      }
+    });
+  }
+
+  // ---------- table + HUD ----------
+  const STATUS = {
+    "off-limb": { color: "--st-good", text: "Above the limb", icon: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    "on-disk": { color: "--st-warn", text: "In front of the disk", icon: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8l6.6 11.7H1.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6.3v3.4M8 11.6v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' },
+    "occulted": { color: "--st-crit", text: "Behind the disk", icon: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' },
+  };
+  function updateReadouts() {
+    const g = last.geo;
+    $("hud-thetaB").textContent = g.thetaB.toFixed(1) + "°";
+    $("hud-ThetaB").textContent = g.ThetaB.toFixed(1) + "°";
+    const undef = g.bPerp < 1e-6 || !g.refDefined;
+    $("hud-psiB").textContent = undef ? "undefined" : signed(g.psiB, 1) + "°";
+    $("hud-gamma").textContent = "pycelp azimuthBLOSdeg = " + (undef ? "undefined" : signed(g.gammaB, 1) + "°");
+    const st = STATUS[g.visibility];
+    const el = $("status");
+    el.innerHTML = st.icon;
+    el.style.color = "";
+    el.firstChild.style.color = cssVar(st.color);
+    const t = document.createElement("span"); t.textContent = st.text;
+    const sub = document.createElement("span"); sub.className = "sub";
+    sub.textContent = " · r = " + (1 + state.height).toFixed(3) + " R☉, projected " + g.rhoPOS.toFixed(3) + " R☉";
+    el.append(t, sub);
+    const banner = $("banner");
+    if (g.visibility === "occulted") {
+      banner.hidden = false;
+      banner.innerHTML = STATUS.occulted.icon;
+      banner.firstChild.style.color = cssVar("--st-crit");
+      banner.append(document.createTextNode("This voxel is hidden behind the disk. The profiles show what it emits towards the observer."));
+    } else if (g.visibility === "on-disk") {
+      banner.hidden = false;
+      banner.innerHTML = STATUS["on-disk"].icon;
+      banner.firstChild.style.color = cssVar("--st-warn");
+      banner.append(document.createTextNode("This voxel is seen against the disk. The profiles ignore the photospheric background."));
+    } else banner.hidden = true;
+    plotsEl.classList.toggle("dim", g.visibility === "occulted");
+    $("scale-note").textContent = state.norm === "own" ? "Each line divided by its own Stokes I peak" : "Both lines divided by the 1074.6 nm Stokes I peak";
+
+    const I0 = last.lines[0].eps.I;
+    last.lines.forEach(function (ln, n) {
+      const set = (k, v) => { const td = document.querySelector('td[data-k="' + k + '"][data-l="' + n + '"]'); if (td) td.textContent = v; };
+      set("sigma", signed(ln.sigma, 4));
+      set("epsI", sci(ln.eps.I, 3));
+      set("ratio", (ln.eps.I / I0).toFixed(3));
+      set("LI", (100 * ln.L_I).toFixed(2) + "%");
+      set("QU", pct(ln.Q_I, 2) + " · " + pct(ln.U_I, 2));
+      set("chi", ln.L_I > 1e-7 && g.refDefined ? signed(ln.chi, 1) + "°" : "undefined");
+      set("V", pct(ln.Vext / ln.Ipeak, 3));
+      set("width", ln.prof.sigmaA.toFixed(3) + " Å");
+      set("atomic", ln.line.geff.toFixed(2) + " · " + ln.line.D.toFixed(3) + " · " + ln.line.E.toFixed(3));
+    });
+  }
+
+  // ---------- main loop ----------
+  let pending = false;
+  function schedule() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; render(); }); }
+  function render() {
+    const sigMax = Math.max.apply(null, model.lines.map((L) => model.dopplerSigma(L, model.Te, state.vnt)));
+    const shift = Math.abs(state.vdop) / 3e5 * 10800;
+    const half = Math.max(3, Math.ceil((4.2 * sigMax + shift) * 2) / 2);
+    if (!dlam || dlam[dlam.length - 1] !== half) {
+      dlam = new Float64Array(NPTS);
+      for (let i = 0; i < NPTS; i++) dlam[i] = -half + (2 * half) * i / (NPTS - 1);
+    }
+    last = model.compute(state, dlam);
+    updateReadouts();
+    drawPlots();
+    if (window.scene3d) window.scene3d.update(last, state);
+  }
+  window.addEventListener("scene3d-ready", function () { if (last) window.scene3d.update(last, state); });
+  window.stokesApp = { state: state, get result() { return last; } };
+
+  // ---------- CSV ----------
+  $("copy").addEventListener("click", function () {
+    const btn = $("copy");
+    const head = ["dlambda_A"];
+    last.lines.forEach(function (ln, n) { ["I", "Q", "U", "V"].forEach((k) => head.push(k + "_" + (n ? "1079" : "1074"))); });
+    const rows = ["# Fe XIII Stokes emission coefficients, photons cm^-3 s^-1 arcsec^-2 A^-1; " +
+      "h=" + state.height + " Rsun lat=" + state.lat + " lon=" + state.lon + " |B|=" + state.B + " G inc=" + state.inc +
+      " azi=" + state.azi + " log_ne=" + state.logNe + " vnt=" + state.vnt + " vdop=" + state.vdop + " ref=" + state.ref, head.join(",")];
+    for (let i = 0; i < dlam.length; i++) {
+      const r = [dlam[i].toFixed(4)];
+      last.lines.forEach(function (ln) { ["I", "Q", "U", "V"].forEach((k) => r.push(ln.prof[k][i].toExponential(6))); });
+      rows.push(r.join(","));
+    }
+    const text = rows.join("\n");
+    const done = (msg) => { btn.textContent = msg; setTimeout(() => { btn.textContent = "Copy spectra as CSV"; }, 1800); };
+    const fallback = function () {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      done(ok ? "Copied" : "Copy blocked by the browser");
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done("Copied " + dlam.length + " rows"), fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  });
+
+  // ---------- theme + resize ----------
+  new ResizeObserver(function () { drawPlots(); }).observe(plotsEl);
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { updateReadouts(); drawPlots(); }); } catch (e) { /* old browsers */ }
+  new MutationObserver(function () { updateReadouts(); drawPlots(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  syncControls();
+  render();
+})();
+</script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+
+const host = document.getElementById("viewport");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COL = {
+  B: new THREE.Color(css("--v-b")), Bp: new THREE.Color(css("--v-bp")), r: new THREE.Color(css("--v-r")),
+  los: new THREE.Color(css("--v-los")), ref: new THREE.Color(css("--v-ref")),
+  l1074: new THREE.Color(css("--v-1074")), l1079: new THREE.Color(css("--v-1079")),
+  axis: new THREE.Color("#6d7c95"), rings: new THREE.Color("#8fa3c4"), grid: new THREE.Color("#7a2e0e"),
+};
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+} catch (e) {
+  document.getElementById("scene-fallback").hidden = false;
+  throw e;
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+host.prepend(renderer.domElement);
+renderer.domElement.setAttribute("aria-label", "3D view of the Sun, the plasma voxel, its magnetic field and the line of sight. Drag to rotate, scroll to zoom.");
+renderer.domElement.setAttribute("role", "img");
+
+const labels = new CSS2DRenderer();
+labels.domElement.className = "label-layer";
+host.appendChild(labels.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 100);
+camera.up.set(0, 0, 1);
+const VIEWS = {
+  oblique: new THREE.Vector3(4.3, 4.0, 2.4),
+  observer: new THREE.Vector3(7.2, 0, 0),
+  side: new THREE.Vector3(0.0001, 7.2, 0.5),
+  top: new THREE.Vector3(1.0, 0.0001, 7.2),
+};
+camera.position.copy(VIEWS.oblique);
+scene.add(camera);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = !reduceMotion;
+controls.dampingFactor = 0.08;
+controls.minDistance = 2.2;
+controls.maxDistance = 22;
+controls.target.set(0, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+keyLight.position.set(0.4, 0.5, 1);
+camera.add(keyLight);
+
+// ---------- the Sun ----------
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 96, 64),
+  new THREE.ShaderMaterial({
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ float mu = clamp(dot(vN, vV), 0.0, 1.0);
+        float ld = 1.0 - 0.62 * (1.0 - mu) - 0.18 * (1.0 - mu * mu);
+        vec3 core = vec3(1.0, 0.85, 0.56); vec3 limb = vec3(0.80, 0.27, 0.05);
+        vec3 col = mix(limb, core, pow(mu, 0.5)) * (0.42 + 0.7 * ld);
+        gl_FragColor = vec4(col, 1.0); }`,
+  })
+);
+scene.add(sun);
+
+function glowTexture(stops) {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const g = c.getContext("2d");
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  stops.forEach(([o, col]) => grd.addColorStop(o, col));
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const corona = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTexture([[0, "rgba(255,214,160,0.9)"], [0.36, "rgba(255,170,90,0.42)"], [0.5, "rgba(255,150,80,0.16)"], [0.72, "rgba(120,140,220,0.05)"], [1, "rgba(0,0,0,0)"]]),
+  blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+}));
+corona.scale.set(5.6, 5.6, 1);
+scene.add(corona);
+
+function lineFrom(points, color, opacity, dashed) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = dashed
+    ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 0.05, gapSize: 0.035, depthWrite: false })
+    : new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+  const ln = new THREE.Line(geo, mat);
+  if (dashed) ln.computeLineDistances();
+  return ln;
+}
+function setLine(ln, points) {
+  ln.geometry.setFromPoints(points);
+  ln.geometry.attributes.position.needsUpdate = true;
+  ln.geometry.computeBoundingSphere();
+  if (ln.material.isLineDashedMaterial) ln.computeLineDistances();
+}
+// heliographic grid
+const gridGroup = new THREE.Group();
+for (let lon = 0; lon < 180; lon += 30) {
+  const pts = [];
+  for (let k = 0; k <= 96; k++) { const t = k / 96 * 2 * Math.PI; const l = lon * Math.PI / 180; pts.push(new THREE.Vector3(Math.cos(t) * Math.cos(l), Math.cos(t) * Math.sin(l), Math.sin(t)).multiplyScalar(1.003)); }
+  gridGroup.add(lineFrom(pts, COL.grid, 0.55));
+}
+for (let lat = -60; lat <= 60; lat += 30) {
+  const pts = []; const la = lat * Math.PI / 180;
+  for (let k = 0; k <= 96; k++) { const t = k / 96 * 2 * Math.PI; pts.push(new THREE.Vector3(Math.cos(la) * Math.cos(t), Math.cos(la) * Math.sin(t), Math.sin(la)).multiplyScalar(1.003)); }
+  gridGroup.add(lineFrom(pts, COL.grid, lat === 0 ? 0.8 : 0.5));
+}
+scene.add(gridGroup);
+
+// plane of the sky: limb ring, faint disk, height rings
+function circleYZ(r, n = 160) { const pts = []; for (let k = 0; k <= n; k++) { const t = k / n * 2 * Math.PI; pts.push(new THREE.Vector3(0, r * Math.cos(t), r * Math.sin(t))); } return pts; }
+scene.add(lineFrom(circleYZ(1.004), new THREE.Color("#ffe3b8"), 0.65));
+const posDisk = new THREE.Mesh(new THREE.CircleGeometry(2.6, 96).rotateY(Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: COL.rings, transparent: true, opacity: 0.035, side: THREE.DoubleSide, depthWrite: false }));
+scene.add(posDisk);
+function label(html, cls) {
+  const el = document.createElement("span"); el.className = "tag " + (cls || ""); el.innerHTML = html;
+  return new CSS2DObject(el);
+}
+[1.5, 2, 2.5].forEach(function (r) {
+  scene.add(lineFrom(circleYZ(r), COL.rings, 0.22));
+  const l = label(r.toFixed(1) + " R☉", "small"); l.position.set(0, r * Math.cos(-0.62), r * Math.sin(-0.62)); scene.add(l);
+});
+const posLabel = label("plane of sky", "small"); posLabel.position.set(0, -2.15, 1.75); scene.add(posLabel);
+
+// axes
+function cone(color, r, h) { return new THREE.Mesh(new THREE.ConeGeometry(r, h, 20), new THREE.MeshBasicMaterial({ color })); }
+[[new THREE.Vector3(1, 0, 0), "x · to observer", 3.5], [new THREE.Vector3(0, 1, 0), "y · west", 3.0], [new THREE.Vector3(0, 0, 1), "z · north", 2.9]].forEach(function ([d, txt, L]) {
+  scene.add(lineFrom([d.clone().multiplyScalar(1.0), d.clone().multiplyScalar(L)], COL.axis, 0.9));
+  const c = cone(COL.axis, 0.035, 0.12); c.position.copy(d.clone().multiplyScalar(L)); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d); scene.add(c);
+  const l = label(txt, "small"); l.position.copy(d.clone().multiplyScalar(L + 0.18)); scene.add(l);
+});
+
+// ---------- voxel objects ----------
+function makeArrow(color, radius = 0.013, headLen = 0.1, headRad = 0.04) {
+  const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.55, metalness: 0 });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 18), mat);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(headRad, headLen, 28), mat);
+  const g = new THREE.Group(); g.add(shaft, head); g.userData = { shaft, head, headLen };
+  scene.add(g); return g;
+}
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+function setArrow(g, origin, dir, length) {
+  const { shaft, head, headLen } = g.userData;
+  const ok = length > 1e-4 && dir.lengthSq() > 1e-12;
+  g.visible = ok; if (!ok) return;
+  const L = Math.max(length - headLen, 1e-3);
+  shaft.scale.set(1, L, 1); shaft.position.set(0, L / 2, 0);
+  head.position.set(0, L + headLen / 2, 0);
+  g.position.copy(origin);
+  g.quaternion.setFromUnitVectors(Y_AXIS, dir.clone().normalize());
+}
+function makeBar(color, radius) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 14), new THREE.MeshBasicMaterial({ color }));
+  scene.add(m); return m;
+}
+function setBar(m, center, dir, half) {
+  m.visible = half > 1e-4; if (!m.visible) return;
+  m.position.copy(center); m.scale.set(1, 2 * half, 1); m.quaternion.setFromUnitVectors(Y_AXIS, dir.clone().normalize());
+}
+function makeTube(color) {
+  const m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color })); scene.add(m); return m;
+}
+function setTube(m, pts, r = 0.007) {
+  m.geometry.dispose();
+  if (!pts || pts.length < 2) { m.visible = false; m.geometry = new THREE.BufferGeometry(); return; }
+  m.visible = true;
+  m.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, r, 8, false);
+}
+/** Points on the arc that rotates unit vector a onto unit vector b (shorter way), radius rad around center. */
+function arcBetween(center, a, b, rad, n = 40) {
+  const ang = a.angleTo(b);
+  if (ang < 1e-3) return null;
+  let axis = new THREE.Vector3().crossVectors(a, b);
+  if (axis.lengthSq() < 1e-10) { axis = new THREE.Vector3(1, 0, 0).cross(a); if (axis.lengthSq() < 1e-10) axis = new THREE.Vector3(0, 1, 0).cross(a); }
+  axis.normalize();
+  const pts = [];
+  for (let i = 0; i <= n; i++) pts.push(a.clone().applyAxisAngle(axis, ang * i / n).multiplyScalar(rad).add(center));
+  return pts;
+}
+
+const voxel = new THREE.Mesh(new THREE.SphereGeometry(0.036, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+scene.add(voxel);
+const voxelGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture([[0, "rgba(255,255,255,0.9)"], [0.25, "rgba(200,230,255,0.35)"], [1, "rgba(0,0,0,0)"]]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+voxelGlow.scale.set(0.42, 0.42, 1);
+scene.add(voxelGlow);
+const foot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 12), new THREE.MeshBasicMaterial({ color: COL.r }));
+scene.add(foot);
+const radialGuide = lineFrom([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)], COL.r, 0.55, true); scene.add(radialGuide);
+const losLine = lineFrom([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)], COL.los, 0.38, true); scene.add(losLine);
+const bPerpLine = lineFrom([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)], COL.Bp, 0.95, true); scene.add(bPerpLine);
+const dropLine = lineFrom([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)], COL.Bp, 0.4, true); scene.add(dropLine);
+const localPOS = new THREE.Group();
+localPOS.add(new THREE.Mesh(new THREE.CircleGeometry(0.6, 64).rotateY(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false })));
+localPOS.add(lineFrom(circleYZ(0.6, 96), 0xffffff, 0.28));
+scene.add(localPOS);
+
+const aB = makeArrow(COL.B, 0.016, 0.12, 0.048);
+const aR = makeArrow(COL.r);
+const aLOS = makeArrow(COL.los);
+const aRef = makeArrow(COL.ref, 0.009, 0.08, 0.03);
+const bar1074 = makeBar(COL.l1074, 0.013);
+const bar1079 = makeBar(COL.l1079, 0.008);
+const arcTheta = makeTube(COL.r), arcBigTheta = makeTube(COL.los), arcGamma = makeTube(COL.ref);
+const gammaHead = cone(COL.ref, 0.022, 0.06); scene.add(gammaHead);
+
+const tB = label('B', ""); tB.element.style.color = css("--v-b");
+const tTh = label('θ<sub>B</sub>', ""); tTh.element.style.color = css("--v-r");
+const tTH = label('Θ<sub>B</sub>', ""); tTH.element.style.color = css("--v-los");
+const tGa = label('ψ<sub>B</sub>', ""); tGa.element.style.color = css("--v-ref");
+const tQ = label('+Q', "small"); tQ.element.style.color = css("--v-ref");
+[tB, tTh, tTH, tGa, tQ].forEach((t) => scene.add(t));
+
+let dirty = true;
+const X = new THREE.Vector3(1, 0, 0);
+function v3(a) { return new THREE.Vector3(a[0], a[1], a[2]); }
+
+function update(res) {
+  const g = res.geo;
+  const loc = v3(g.loc), b = v3(g.bhat).normalize(), r = v3(g.frame.r);
+  voxel.position.copy(loc); voxelGlow.position.copy(loc);
+  foot.position.copy(r);
+  setLine(radialGuide, [r.clone().multiplyScalar(1.004), loc]);
+  setLine(losLine, [new THREE.Vector3(-3.4, loc.y, loc.z), new THREE.Vector3(3.6, loc.y, loc.z)]);
+  localPOS.position.copy(loc);
+
+  const LB = 0.95;
+  setArrow(aB, loc, b, LB);
+  setArrow(aR, loc, r, 0.66);
+  setArrow(aLOS, loc, X, 0.7);
+  tB.position.copy(loc.clone().add(b.clone().multiplyScalar(LB + 0.07)));
+
+  // plane-of-sky projection of B
+  const bp = new THREE.Vector3(0, b.y, b.z);
+  const tip = loc.clone().add(b.clone().multiplyScalar(LB));
+  const ptip = loc.clone().add(bp.clone().multiplyScalar(LB));
+  const hasBp = bp.length() > 1e-4;
+  bPerpLine.visible = hasBp; dropLine.visible = hasBp && Math.abs(b.x) > 1e-3;
+  if (hasBp) { setLine(bPerpLine, [loc, ptip]); setLine(dropLine, [tip, ptip]); }
+
+  // +Q reference direction (plane of sky)
+  const refp = new THREE.Vector3(0, g.refVec[1], g.refVec[2]);
+  const hasRef = refp.length() > 1e-9;
+  if (hasRef) refp.normalize();
+  setArrow(aRef, loc, refp, hasRef ? 0.56 : 0);
+  tQ.visible = hasRef; if (hasRef) tQ.position.copy(loc.clone().add(refp.clone().multiplyScalar(0.66)));
+
+  // angle arcs
+  const pTh = arcBetween(loc, r, b, 0.38);
+  setTube(arcTheta, pTh);
+  tTh.visible = !!pTh; if (pTh) tTh.position.copy(pTh[pTh.length >> 1].clone().sub(loc).multiplyScalar(1.28).add(loc));
+  const pTH = arcBetween(loc, X, b, 0.54);
+  setTube(arcBigTheta, pTH);
+  tTH.visible = !!pTH; if (pTH) tTH.position.copy(pTH[pTH.length >> 1].clone().sub(loc).multiplyScalar(1.2).add(loc));
+  // psi: rotate the +Q reference about +x (counter-clockwise for the observer) onto the projected field
+  const psi = g.psiB * Math.PI / 180;
+  const showG = hasRef && hasBp && Math.abs(psi) > 2e-3;
+  if (showG) {
+    const pts = [];
+    for (let i = 0; i <= 40; i++) pts.push(refp.clone().applyAxisAngle(X, psi * i / 40).multiplyScalar(0.32).add(loc));
+    setTube(arcGamma, pts, 0.006);
+    const end = pts[pts.length - 1], prev = pts[pts.length - 3];
+    gammaHead.visible = true; gammaHead.position.copy(end);
+    gammaHead.quaternion.setFromUnitVectors(Y_AXIS, end.clone().sub(prev).normalize());
+    tGa.visible = true; tGa.position.copy(pts[20].clone().sub(loc).multiplyScalar(1.45).add(loc));
+  } else { setTube(arcGamma, null); gammaHead.visible = false; tGa.visible = false; }
+
+  // linear polarization orientation for each line (length ~ sqrt(L/I))
+  [[bar1074, res.lines[0]], [bar1079, res.lines[1]]].forEach(function ([m, ln]) {
+    if (!hasRef || !(ln.L_I > 1e-6)) { m.visible = false; return; }
+    const chi = ln.chi * Math.PI / 180;
+    const dir = refp.clone().applyAxisAngle(X, chi);
+    setBar(m, loc, dir, 0.5 * Math.min(1, Math.max(0.1, Math.sqrt(ln.L_I / 0.25))));
+  });
+  dirty = true;
+}
+
+// ---------- camera presets ----------
+let tween = null;
+const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
+viewButtons.forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    viewButtons.forEach((o) => o.setAttribute("aria-pressed", String(o === btn)));
+    const to = VIEWS[btn.dataset.view].clone();
+    const from = camera.position.clone(), tFrom = controls.target.clone();
+    if (reduceMotion) { camera.position.copy(to); controls.target.set(0, 0, 0); controls.update(); dirty = true; return; }
+    tween = { from, to, tFrom, t0: performance.now(), dur: 650 };
+  });
+});
+controls.addEventListener("start", function () { tween = null; viewButtons.forEach((o) => o.setAttribute("aria-pressed", "false")); });
+controls.addEventListener("change", function () { dirty = true; });
+
+function resize() {
+  const w = host.clientWidth, h = host.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  labels.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  dirty = true;
+}
+new ResizeObserver(resize).observe(host);
+resize();
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (tween) {
+    let t = Math.min(1, (now - tween.t0) / tween.dur);
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    // move along a great circle so the camera never passes through the Sun
+    const a = tween.from.clone().normalize(), bdir = tween.to.clone().normalize();
+    const ra = tween.from.length(), rb = tween.to.length();
+    const ang = a.angleTo(bdir);
+    let dir;
+    if (ang < 1e-4) dir = bdir;
+    else { const ax = new THREE.Vector3().crossVectors(a, bdir); if (ax.lengthSq() < 1e-10) ax.set(0, 0, 1); dir = a.applyAxisAngle(ax.normalize(), ang * e); }
+    camera.position.copy(dir.multiplyScalar(ra + (rb - ra) * e));
+    controls.target.lerpVectors(tween.tFrom, new THREE.Vector3(), e);
+    if (t >= 1) tween = null;
+    dirty = true;
+  }
+  if (controls.update()) dirty = true;
+  if (dirty) { renderer.render(scene, camera); labels.render(scene, camera); dirty = false; }
+}
+requestAnimationFrame(frame);
+
+window.scene3d = { update };
+window.dispatchEvent(new Event("scene3d-ready"));
+</script>
+</body>
+</html>
