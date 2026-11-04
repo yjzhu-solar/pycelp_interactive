@@ -30,6 +30,10 @@ python build_see_table.py                 # all levels, ~40 min on 10 cores
 python build_see_table.py --nlevels 100 --out fe13_see_table_100.js   # ~30 s
 ```
 
+After regenerating the table or editing `stokes_model.js`, bump the `?v=` number on both `<script src>` tags in
+`index.html`. GitHub Pages lets browsers cache these files for 10 minutes, and the version number makes a refreshed page
+fetch matching copies.
+
 The script checks the interpolation against direct pyCELP solutions at random off-grid points. The current table
 interpolates C to within 0.2% and the alignment to within 4×10⁻⁴.
 
