@@ -328,6 +328,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <button type="button" class="btn" data-place="east">East limb</button>
             <button type="button" class="btn" data-place="north">North pole</button>
             <button type="button" class="btn" data-place="front">In front, lon −40°</button>
+            <button type="button" class="btn" data-place="random" title="Random position above the limb at the current height, uniform over the visible part of the sphere">Random</button>
           </div>
           <p class="note">Longitude ±90° puts the voxel in the plane of the sky; positive is west.</p>
         </fieldset>
@@ -356,6 +357,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <button type="button" class="btn" data-field="los" title="Field along the line of sight, towards the observer">Along LOS</button>
             <button type="button" class="btn" data-field="reverse" title="B → −B: same I, Q, U; Stokes V changes sign">Reverse B</button>
             <button type="button" class="btn" data-field="mirror" title="Reflect B across the plane holding the local vertical and the LOS: θB and ΘB unchanged, ψB → −ψB in the radial frame">Mirror</button>
+            <button type="button" class="btn" data-field="random" title="Random field direction, uniform over the sphere; strength unchanged">Random</button>
             <button type="button" class="btn" data-field="twin" title="Paraschiv &amp; Judge (2022) degeneracy: mirror the voxel across the plane of the sky and turn B⊥ by 180°, keeping B_LOS. Every Stokes profile of both lines stays the same.">Ambiguous twin</button>
           </div>
           <p class="note" id="field-note" aria-live="polite" hidden></p>
@@ -603,6 +605,17 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       else if (p === "east") { state.lat = 0; state.lon = -90; }
       else if (p === "north") { state.lat = 90; state.lon = 90; }
       else if (p === "front") { state.lat = 20; state.lon = -40; }
+      else if (p === "random") {
+        // uniform over the sphere of radius 1 + h, keeping only points seen above the limb
+        const r = 1 + state.height;
+        let found = false;
+        for (let k = 0; k < 2000 && !found; k++) {
+          const z = 2 * Math.random() - 1, ph = 2 * Math.PI * Math.random(), c = Math.sqrt(1 - z * z);
+          const x = c * Math.cos(ph), y = c * Math.sin(ph);
+          if (r * Math.hypot(y, z) > 1.001) { state.lat = Math.asin(z) / DEG; state.lon = Math.atan2(y, x) / DEG; found = true; }
+        }
+        if (!found) { state.lat = 0; state.lon = 90; }
+      }
       syncControls(); schedule();
     });
   });
@@ -622,6 +635,10 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       const f = SM.localFrame(state.lat, state.lon);
       const bv = SM.fieldVector(f, state.inc, state.azi);
       if (p === "radial") { state.inc = 0; }
+      else if (p === "random") {
+        state.inc = Math.acos(1 - 2 * Math.random()) / DEG;   // isotropic direction
+        state.azi = 360 * Math.random() - 180;
+      }
       else if (p === "vanvleck") { state.inc = Math.round(SM.VAN_VLECK * 100) / 100; }
       else if (p === "los") { setFieldFromVector([1, 0, 0]); }
       else if (p === "reverse") { setFieldFromVector(SM.vec.scale(bv, -1)); }
