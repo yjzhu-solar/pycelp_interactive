@@ -356,7 +356,9 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <button type="button" class="btn" data-field="los" title="Field along the line of sight, towards the observer">Along LOS</button>
             <button type="button" class="btn" data-field="reverse" title="B → −B: same I, Q, U; Stokes V changes sign">Reverse B</button>
             <button type="button" class="btn" data-field="mirror" title="Reflect B across the plane holding the local vertical and the LOS: θB and ΘB unchanged, ψB → −ψB in the radial frame">Mirror</button>
+            <button type="button" class="btn" data-field="twin" title="Paraschiv &amp; Judge (2022) degeneracy: mirror the voxel across the plane of the sky and turn B⊥ by 180°, keeping B_LOS. Every Stokes profile of both lines stays the same.">Ambiguous twin</button>
           </div>
+          <p class="note" id="field-note" aria-live="polite" hidden></p>
         </fieldset>
 
         <fieldset class="card" id="fs-plasma">
@@ -456,6 +458,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <ul>
               <li>The radiation-field anisotropy enters as P<sub>2</sub>(cos <span class="m">θ</span><sub>B</sub>), so only cos²<span class="m">θ</span><sub>B</sub> matters: <span class="m">θ</span><sub>B</sub> and 180° − <span class="m">θ</span><sub>B</sub> are identical, and 11 nodes in cos²<span class="m">θ</span><sub>B</sub> interpolate almost exactly.</li>
               <li>|<span class="m">B</span>|, the line of sight and the Q/U reference never enter the statistical equilibrium (no atomic coherences, saturated Hanle regime). Moving the voxel around the Sun at fixed height and inclination reuses the same entry.</li>
+              <li><b>Ambiguous twin</b> is the irreducible two-line degeneracy found by Paraschiv &amp; Judge (2022) with CLEDB: mirroring the voxel across the plane of the sky and turning <span class="m">B</span><sub>⊥</sub> by 180°, keeping <span class="m">B</span><sub>LOS</sub>, leaves the height, cos²<span class="m">θ</span><sub>B</sub>, <span class="m">Θ</span><sub>B</sub> and <span class="m">ψ</span><sub>B</sub> mod 180° unchanged. No combination of the two lines' I, Q, U, V can tell the pair apart. In the plane of the sky it is the 180° azimuth ambiguity.</li>
               <li><b>Reverse B</b> flips only Stokes V. <b>Mirror</b> keeps <span class="m">θ</span><sub>B</sub> and <span class="m">Θ</span><sub>B</sub> and flips <span class="m">ψ</span><sub>B</sub>, which flips U in the radial frame.</li>
             </ul>
           </div>
@@ -481,6 +484,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <h3>Credits</h3>
             <ul>
               <li>Statistical equilibrium and emission coefficients from <a href="https://github.com/tschad/pycelp" target="_blank" rel="noopener">pyCELP</a> by T. Schad, described in <a href="https://doi.org/10.1007/s11207-020-01669-1" target="_blank" rel="noopener">Schad &amp; Dima (2020), Solar Phys. 295, 98</a>. The browser model is a port of pyCELP code under its BSD 3-clause licence (<a href="LICENSE-pycelp.txt">notice</a>).</li>
+              <li>Ambiguous-twin degeneracy from Paraschiv &amp; Judge (2022), <i>Solar Physics</i> (<a href="https://github.com/arparaschiv/solar-coronal-inversion" target="_blank" rel="noopener">CLEDB</a>).</li>
               <li>Atomic data from <a href="https://www.chiantidatabase.org" target="_blank" rel="noopener">CHIANTI</a> 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).</li>
               <li>3D view drawn with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>.</li>
             </ul>
@@ -607,8 +611,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     state.inc = Math.round(a.inc * 100) / 100;
     state.azi = Math.round(a.azi * 100) / 100;
   }
+  const fieldNote = $("field-note");
+  function clearFieldNote() { fieldNote.hidden = true; fieldNote.textContent = ""; }
+  document.querySelectorAll("input, [data-place]").forEach((el) => el.addEventListener(el.tagName === "INPUT" ? "input" : "click", clearFieldNote));
   document.querySelectorAll("[data-field]").forEach(function (b) {
     b.addEventListener("click", function () {
+      clearFieldNote();
       const p = b.dataset.field;
       const f = SM.localFrame(state.lat, state.lon);
       const bv = SM.fieldVector(f, state.inc, state.azi);
@@ -616,6 +624,18 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       else if (p === "vanvleck") { state.inc = Math.round(SM.VAN_VLECK * 100) / 100; }
       else if (p === "los") { setFieldFromVector([1, 0, 0]); }
       else if (p === "reverse") { setFieldFromVector(SM.vec.scale(bv, -1)); }
+      else if (p === "twin") {
+        const t = SM.ambiguousTwin(state);
+        state.lon = t.lon; state.inc = t.inc; state.azi = t.azi;
+        syncControls(); schedule();
+        const fmt = (x) => signed(x, 2);
+        fieldNote.textContent = Math.abs(t.xFrom) < 1e-9
+          ? "Ambiguous twin: the voxel is in the plane of the sky, so only B⊥ turns by 180° (the classic azimuth ambiguity). I, Q, U and V of both lines are unchanged."
+          : "Ambiguous twin: the voxel moved along the line of sight from x = " + fmt(t.xFrom) + " to " + fmt(t.xTo) +
+            " R☉ and B⊥ turned by 180°, keeping B along the line of sight. I, Q, U and V of both lines are unchanged.";
+        fieldNote.hidden = false;
+        return;
+      }
       else if (p === "mirror") {
         const n = SM.vec.cross(f.r, [1, 0, 0]);
         const nn = SM.vec.norm(n);

@@ -109,6 +109,23 @@
     return { inc, azi };
   }
 
+  /** The irreducible two-line degeneracy of Paraschiv & Judge (2022, CLEDB, their Table 2): mirror the voxel
+   *  across the plane of the sky (x -> -x) and turn B_perp by 180 deg, keeping B_LOS. The height, cos^2 theta_B
+   *  (B.r flips sign), Theta_B, psi_B mod 180 and the plane-of-sky position are unchanged, so every Stokes
+   *  parameter of every line is identical. For a voxel in the plane of the sky this is the 180-degree azimuth
+   *  ambiguity. Applying it twice returns the original state. */
+  function ambiguousTwin(s) {
+    const f = localFrame(s.lat, s.lon);
+    const b = fieldVector(f, s.inc, s.azi);
+    let lon = 180 - s.lon;
+    if (lon > 180) lon -= 360;
+    if (lon <= -180) lon += 360;
+    const f2 = localFrame(s.lat, lon);
+    const a = localAngles(f2, [b[0], -b[1], -b[2]]);
+    const r = 1 + s.height;
+    return { lat: s.lat, lon, inc: a.inc, azi: a.azi, xFrom: f.r[0] * r, xTo: f2.r[0] * r };
+  }
+
   function createModel(table) {
     const axes = [table.grid.log10_ne, table.grid.log10_h, table.grid.mu2];
     const n1 = axes[1].n, n2 = axes[2].n;
@@ -234,7 +251,7 @@
   }
 
   root.StokesModel = {
-    createModel, fieldPositionAngleDeg, pycelpAzimuthDeg, localFrame, fieldVector, localAngles, angleDeg,
+    createModel, ambiguousTwin, fieldPositionAngleDeg, pycelpAzimuthDeg, localFrame, fieldVector, localAngles, angleDeg,
     vec: { dot, cross, norm, scale, add, sub }, VAN_VLECK, DEG,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
