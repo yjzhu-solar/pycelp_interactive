@@ -111,6 +111,15 @@ sub, sup { line-height: 0; }
 .eyebrow { font: 600 11.5px/1.2 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
 h1 { font: 500 clamp(26px, 3.2vw, 34px)/1.08 var(--font-math); margin: 6px 0 8px; text-wrap: balance; }
 .lede { margin: 0; color: var(--ink-2); max-width: 70ch; }
+.caveat { margin: 10px 0 0; max-width: 70ch; padding: 7px 12px; font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; }
+.caveat summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+.caveat summary::-webkit-details-marker { display: none; }
+.caveat summary::after { content: "+"; margin-left: auto; font: 400 16px/1 var(--font-mono); color: var(--ink-3); }
+.caveat[open] summary::after { content: "−"; }
+.caveat summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.caveat summary b { color: var(--ink); font-weight: 600; }
+.caveat summary span { color: var(--ink-3); }
+.caveat p { margin: 6px 0 2px; }
 .provenance { display: flex; flex-wrap: wrap; gap: 6px; }
 .pill { font: 500 12px/1 var(--font-label); letter-spacing: 0.03em; padding: 7px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
 
@@ -187,6 +196,15 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
 .btn:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--rule); color: var(--ink-2); }
 .note { margin: 0; font-size: 12px; color: var(--ink-3); }
 .ctl.unused { opacity: 0.5; }
+.fx-panel { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.fx-count { margin-left: 10px; font: 500 12.5px/1 var(--font-ui); color: var(--accent); }
+.fx { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid var(--rule); }
+.fx-head { font-weight: 500; color: var(--ink); }
+.fx-body { display: flex; flex-direction: column; gap: 8px; }
+.fx-body[hidden] { display: none; }
+.fx-foot { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.ctl-grid .ctl input[type="range"] { min-width: 0; }
+.legend .sw.dash { background: repeating-linear-gradient(90deg, var(--ink-3) 0 5px, transparent 5px 8px) !important; }
 
 /* ---------- spectra panel ---------- */
 .spectra { padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -263,7 +281,11 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     <div class="titles">
       <p class="eyebrow">pyCELP forward synthesis · single coronal voxel</p>
       <h1>Fe XIII Stokes Explorer</h1>
-      <p class="lede">Place a plasma voxel above the Sun, orient its magnetic field, and watch the polarized emission of Fe XIII 1074.6 nm and 1079.8 nm respond. Atomic level populations and alignments come from a pre-computed pyCELP table; the viewing geometry and the spectra are evaluated live in your browser.</p>
+      <p class="lede">Place a plasma voxel above the Sun, orient its magnetic field, and watch the polarized emission of Fe XIII 1074.7 nm and 1079.8 nm respond. Atomic level populations and alignments come from a pre-computed pyCELP table; the viewing geometry and the spectra are evaluated live in your browser.</p>
+      <details class="caveat">
+        <summary><b>One point, not a line of sight</b><span>why real observations differ</span></summary>
+        <p>Like single-point inversions such as CLEDB, the page treats all the light as coming from one voxel. A real coronal line of sight crosses plasma with different densities, temperatures and field directions, and the observed profiles are emissivity-weighted sums along it. Linear polarization from differently oriented fields partly cancels, V averages <span class="m">B</span><sub>LOS</sub>, the 1079/1074 ratio leans toward the densest plasma, and the K corona collects every electron. These effects are often not negligible.</p>
+      </details>
     </div>
     <div class="provenance" id="provenance" aria-label="Model details"></div>
   </header>
@@ -394,11 +416,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
         <div class="spec-head">
           <div>
             <h2>Stokes profiles</h2>
-            <p id="scale-note">Both lines divided by the 1074.6 nm Stokes I peak</p>
+            <p id="scale-note">Both lines divided by the 1074.7 nm Stokes I peak</p>
           </div>
           <ul class="legend" aria-label="Spectral lines">
-            <li><span class="sw" style="background: var(--s1074)"></span>Fe XIII 1074.6 nm</li>
+            <li><span class="sw" style="background: var(--s1074)"></span>Fe XIII 1074.7 nm</li>
             <li><span class="sw" style="background: var(--s1079)"></span>Fe XIII 1079.8 nm</li>
+            <li id="lg-coronal" hidden><span class="sw dash"></span>line emission alone</li>
           </ul>
         </div>
         <div class="toolbar">
@@ -416,6 +439,13 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
               <button type="button" data-ref="north" aria-pressed="false">Solar north</button>
             </span>
           </div>
+          <div class="seg">
+            <span class="lab" id="lab-win">Window</span>
+            <span class="opts" role="group" aria-labelledby="lab-win">
+              <button type="button" data-win="line" aria-pressed="true" title="Just wide enough for the coronal line">Line</button>
+              <button type="button" data-win="20" aria-pressed="false" title="About the full DKIST/Cryo-NIRSP spectral window">±20 Å</button>
+            </span>
+          </div>
           <label class="check"><input type="checkbox" id="lock"> Lock y-axes</label>
         </div>
         <p class="banner" id="banner" hidden></p>
@@ -426,12 +456,105 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
         </div>
       </div>
 
+      <details class="card about" id="fs-obs">
+        <summary><span>Observation effects<span class="fx-count" id="fx-count"></span></span></summary>
+        <div class="fx-panel" role="group" aria-label="Observation effects">
+        <p class="note" id="fx-intro">Add the K-corona continuum and what the atmosphere and instrument do to the spectrum, in the order listed. Slider values start at a fit to DKIST/Cryo-NIRSP Fe XIII 1074.7 nm data. Plots stay divided by the line's I peak. The table below always describes the Fe XIII line emission alone.</p>
+        <div class="fx">
+          <label class="check fx-head"><input type="checkbox" id="fxKcor"> K corona (Thomson scattering)</label>
+          <div class="fx-body" hidden>
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label for="kScale">Scale</label>
+                <span class="num"><input id="kScale-n" type="number" aria-label="K-corona continuum relative to this voxel's Thomson scattering" inputmode="decimal"><span class="u">× voxel</span></span>
+                <input id="kScale" type="range" min="0" max="10" step="0.05">
+              </div>
+            </div>
+            <p class="note"><span id="kcor-readout"></span> Photospheric light scattered by this voxel's free electrons, as in pyCELP's PSI synthesis example: a flat continuum, polarized tangentially to the limb (Q &lt; 0 in the radial frame), that follows the density, height and scattering angle. Along a real line of sight all electrons contribute, not only those at Fe XIII temperatures, so the observed continuum relative to the line can be several times the single-voxel value.</p>
+          </div>
+        </div>
+        <div class="fx">
+          <label class="check fx-head"><input type="checkbox" id="fxStray"> Scattered photospheric light</label>
+          <div class="fx-body" hidden>
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label for="sLevel">Continuum</label>
+                <span class="num"><input id="sLevel-n" type="number" aria-label="Scattered-light continuum in units of the coronal 1074 nm I peak" inputmode="decimal"><span class="u">× I<sub>peak</sub></span></span>
+                <input id="sLevel" type="range" min="0" max="10" step="0.05">
+              </div>
+              <div class="ctl">
+                <label for="sB"><span class="m">ḡB</span><sub>LOS</sub> → V</label>
+                <span class="num"><input id="sB-n" type="number" aria-label="Effective Lande factor times line-of-sight field of the scattered photospheric light, in gauss" inputmode="decimal"><span class="u">G</span></span>
+                <input id="sB" type="range" min="-100" max="100" step="1">
+              </div>
+              <div class="ctl">
+                <label for="sBp"><span class="m">B</span><sub>⊥</sub> → Q, U</label>
+                <span class="num"><input id="sBp-n" type="number" aria-label="Transverse field of the scattered photospheric light, in gauss" inputmode="decimal"><span class="u">G</span></span>
+                <input id="sBp" type="range" min="0" max="1000" step="10">
+              </div>
+              <div class="ctl">
+                <label for="sPhi"><span class="m">B</span><sub>⊥</sub> azimuth</label>
+                <span class="num"><input id="sPhi-n" type="number" aria-label="Azimuth of the transverse field, counter-clockwise from solar north, in degrees" inputmode="decimal"><span class="u">°</span></span>
+                <input id="sPhi" type="range" min="-90" max="90" step="1">
+              </div>
+            </div>
+            <p class="note">Disk-integrated solar spectrum (sky aureole and instrument scatter), scaled so its continuum is the given multiple of the 1074.7 nm line's I peak, for both lines. Its V and Q/U are weak-field Zeeman signals of the photospheric lines, from an effective line-of-sight field (times the Landé factor) and a transverse field whose azimuth is counted counter-clockwise from solar north.</p>
+          </div>
+        </div>
+        <div class="fx">
+          <label class="check fx-head"><input type="checkbox" id="fxTell"> Telluric absorption</label>
+          <div class="fx-body" hidden>
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label for="tScale">Absorber column</label>
+                <span class="num"><input id="tScale-n" type="number" aria-label="Telluric optical depth relative to the atlas" inputmode="decimal"><span class="u">× atlas</span></span>
+                <input id="tScale" type="range" min="0" max="5" step="0.05">
+              </div>
+            </div>
+            <p class="note">Transmission <span class="m">T</span>(λ)<sup>scale</sup>, applied to the coronal and scattered light alike. Scale 1 is the atlas: a US standard atmosphere seen from 3 km with 3 mm of precipitable water at airmass 1. Scale 2 is roughly airmass 2.</p>
+          </div>
+        </div>
+        <div class="fx">
+          <label class="check fx-head"><input type="checkbox" id="fxXtalk"> Polarimetric crosstalk</label>
+          <div class="fx-body" hidden>
+            <div class="ctl-grid">
+              <div class="ctl"><label for="xIQ">I → Q</label><span class="num"><input id="xIQ-n" type="number" aria-label="Crosstalk from I to Q in percent" inputmode="decimal"><span class="u">%</span></span><input id="xIQ" type="range" min="-3" max="3" step="0.01"></div>
+              <div class="ctl"><label for="xIU">I → U</label><span class="num"><input id="xIU-n" type="number" aria-label="Crosstalk from I to U in percent" inputmode="decimal"><span class="u">%</span></span><input id="xIU" type="range" min="-3" max="3" step="0.01"></div>
+              <div class="ctl"><label for="xIV">I → V</label><span class="num"><input id="xIV-n" type="number" aria-label="Crosstalk from I to V in percent" inputmode="decimal"><span class="u">%</span></span><input id="xIV" type="range" min="-3" max="3" step="0.01"></div>
+              <div class="ctl"><label for="xVQ">V → Q</label><span class="num"><input id="xVQ-n" type="number" aria-label="Crosstalk from V to Q in percent" inputmode="decimal"><span class="u">%</span></span><input id="xVQ" type="range" min="-20" max="20" step="0.1"></div>
+              <div class="ctl"><label for="xVU">V → U</label><span class="num"><input id="xVU-n" type="number" aria-label="Crosstalk from V to U in percent" inputmode="decimal"><span class="u">%</span></span><input id="xVU" type="range" min="-20" max="20" step="0.1"></div>
+              <div class="ctl"><label for="xQV">Q → V</label><span class="num"><input id="xQV-n" type="number" aria-label="Crosstalk from Q to V in percent" inputmode="decimal"><span class="u">%</span></span><input id="xQV" type="range" min="-60" max="60" step="0.1"></div>
+              <div class="ctl"><label for="xUV">U → V</label><span class="num"><input id="xUV-n" type="number" aria-label="Crosstalk from U to V in percent" inputmode="decimal"><span class="u">%</span></span><input id="xUV" type="range" min="-60" max="60" step="0.1"></div>
+            </div>
+            <p class="note">Residual crosstalk after calibration, the same for both lines, acting on the total signal in a fixed solar-north Q/U frame. With the radial reference selected, the leaked Q and U are rotated into it.</p>
+          </div>
+        </div>
+        <div class="fx">
+          <label class="check fx-head"><input type="checkbox" id="fxLsf"> Spectrograph resolution</label>
+          <div class="fx-body" hidden>
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label for="lsfR">Resolving power <span class="m">R</span></label>
+                <span class="num"><input id="lsfR-n" type="number" aria-label="Spectral resolving power" inputmode="decimal"></span>
+                <input id="lsfR" type="range" min="10000" max="150000" step="1000">
+              </div>
+            </div>
+            <p class="note">Gaussian line-spread function with FWHM λ/<span class="m">R</span>. The atlases resolve the telluric lines, so without it they look deeper and narrower than in data.</p>
+          </div>
+        </div>
+        <div class="fx fx-foot">
+          <label class="check"><input type="checkbox" id="fxOverlay"> Show the line emission alone (dashed)</label>
+          <button type="button" class="btn" id="fx-reset">Reset effect values</button>
+        </div>
+        </div>
+      </details>
+
       <div class="card spectra">
         <div class="tablewrap">
           <table class="lines" id="line-table">
             <thead>
               <tr><th scope="col" style="text-align:left">Per line</th>
-                <th scope="col"><span class="sw" style="background: var(--s1074)"></span>1074.6 nm</th>
+                <th scope="col"><span class="sw" style="background: var(--s1074)"></span>1074.7 nm</th>
                 <th scope="col"><span class="sw" style="background: var(--s1079)"></span>1079.8 nm</th></tr>
             </thead>
             <tbody>
@@ -482,8 +605,37 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
               <li><span class="m">ψ</span><sub>B</sub> is the counter-clockwise rotation, as seen by the observer, from the +Q reference to the plane-of-sky field. The polarization angle χ = ½ atan2(U, Q) is measured the same way (IAU sense).</li>
               <li>Radial reference: Q &lt; 0 means polarization tangential to the limb. Solar north: a fixed frame for all positions, angles measured north through east.</li>
               <li>pyCELP assumes the saturated Hanle regime, valid for these lines above ~10<sup>−5</sup> G: the alignment is quantized along <span class="m">B</span>, so Q and U follow the field direction at any strength and |<span class="m">B</span>| enters only V. At |<span class="m">B</span>| = 0 there is no field direction. The page then aligns the atoms along the local vertical, the symmetry axis of the photospheric radiation, which gives the radial-field result with V = 0. The unsaturated Hanle regime between 0 and ~10<sup>−5</sup> G is not modelled.</li>
-              <li>The profiles are emission coefficients of one voxel, not line-of-sight integrals. Occultation and the disk background are not applied to the spectra.</li>
+              <li>The profiles are emission coefficients of one voxel, not line-of-sight integrals, which is the single-point picture behind inversions such as CLEDB. Observed profiles sum the emission of every voxel along the line of sight, weighted by its emissivity. That mixes field directions, which reduces and rotates the net linear polarization, most strongly where some voxels lie beyond the Van Vleck angle and others do not. It averages <span class="m">B</span><sub>LOS</sub> in V, and weights the density from the 1079/1074 ratio toward the brightest plasma. Occultation and the disk background are not applied to the spectra.</li>
             </ul>
+          </div>
+          <div>
+            <h3>Observation effects (optional)</h3>
+            <p>The <b>Observation effects</b> card turns the coronal profiles into a schematic observed spectrum, following the DKIST/Cryo-NIRSP spectral model of T. Schad. Effects apply in the order light meets them:</p>
+            <ul>
+              <li><b>K corona</b>: this voxel's Thomson scattering, as in pyCELP's PSI synthesis example. With σ<sub>T</sub> = 0.665 × 10<sup>−24</sup> cm², and χ the angle between the local vertical and the line of sight:
+                <ul>
+                  <li><span class="m">ε</span><sub>I</sub> = σ<sub>T</sub><span class="m">n</span><sub>e</sub><span class="m">J</span><sup>0</sup><sub>0</sub>(1 + ω/2 − ¾ω sin²χ)</li>
+                  <li><span class="m">ε</span><sub>pB</sub> = −¾σ<sub>T</sub><span class="m">n</span><sub>e</sub>ω<span class="m">J</span><sup>0</sup><sub>0</sub> sin²χ, which is Q in the radial frame.</li>
+                </ul>
+                <span class="m">J</span><sup>0</sup><sub>0</sub> and the anisotropy ω come from <code>pycelp.allenSolRad</code>. The scale slider multiplies both.</li>
+              <li><b>Scattered light</b> from the sky and the instrument is added next. It uses the disk-integrated solar spectrum <span class="m">S</span>(λ), with its continuum set to a multiple <span class="m">a</span> of the coronal 1074.7 nm I peak, the same for both lines. Its V and Q/U are weak-field Zeeman signals, with <span class="m">C</span> = 4.6686 × 10<sup>−13</sup> Å<sup>−1</sup> G<sup>−1</sup> and one effective field for all photospheric lines:
+                <ul>
+                  <li><span class="m">V</span> = −<span class="m">C</span>λ²<span class="m">ḡB</span><sub>LOS</sub> <span class="m">a</span> d<span class="m">S</span>/dλ</li>
+                  <li><span class="m">Q</span> + i<span class="m">U</span> = −¼(<span class="m">C</span>λ²<span class="m">B</span><sub>⊥</sub>)² e<sup>2iφ</sup> <span class="m">a</span> d²<span class="m">S</span>/dλ²</li>
+                </ul>
+              </li>
+              <li><b>Telluric absorption</b> then multiplies all four Stokes parameters by <span class="m">T</span>(λ)<sup>scale</sup>.</li>
+              <li><b>Crosstalk</b> mixes the totals: Q′ = Q + <i>x</i><sub>IQ</sub> I + <i>x</i><sub>VQ</sub> V, U′ = U + <i>x</i><sub>IU</sub> I + <i>x</i><sub>VU</sub> V, V′ = V + <i>x</i><sub>IV</sub> I + <i>x</i><sub>QV</sub> Q + <i>x</i><sub>UV</sub> U.</li>
+              <li><b>Spectrograph resolution</b> applies last, as a Gaussian of FWHM λ/<span class="m">R</span>.</li>
+            </ul>
+            <p>Scattered-light polarization and crosstalk are fixed on the sky, in the solar-north frame, and are rotated into the radial frame when that reference is selected. The atlases are placed relative to the rest air wavelengths used for Cryo-NIRSP data, 1074.65 and 1079.80 nm. The coronal lines sit there plus their Doppler shift. Not modelled:</p>
+            <ul>
+              <li>noise;</li>
+              <li>the F corona, which near the Sun behaves like more scattered light;</li>
+              <li>velocity shifts of the atlases;</li>
+              <li>per-line amplitudes of the scattered-light Zeeman signals.</li>
+            </ul>
+            <p>The starting values are rounded from a fit to Cryo-NIRSP 1074.7 nm data.</p>
           </div>
           <div>
             <h3>Credits</h3>
@@ -491,8 +643,13 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
               <li>Statistical equilibrium and emission coefficients from <a href="https://github.com/tschad/pycelp" target="_blank" rel="noopener">pyCELP</a> by T. Schad, described in <a href="https://doi.org/10.1007/s11207-020-01669-1" target="_blank" rel="noopener">Schad &amp; Dima (2020), Solar Phys. 295, 98</a>. The browser model is a port of pyCELP code under its BSD 3-clause licence (<a href="LICENSE-pycelp.txt">notice</a>).</li>
               <li>Ambiguous-twin degeneracy from Paraschiv &amp; Judge (2022), <i>Solar Physics</i> (<a href="https://github.com/arparaschiv/solar-coronal-inversion" target="_blank" rel="noopener">CLEDB</a>).</li>
               <li>Atomic data from <a href="https://www.chiantidatabase.org" target="_blank" rel="noopener">CHIANTI</a> 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).</li>
+              <li>The observation-effects model follows the DKIST/Cryo-NIRSP spectral model of T. Schad (<a href="https://doi.org/10.1126/sciadv.adq1604" target="_blank" rel="noopener">Schad et al. 2024, Sci. Adv. 10, eadq1604</a>).</li>
+              <li>The telluric transmission comes from T. Schad's <a href="https://github.com/tschad/dkist_telluric_atlas" target="_blank" rel="noopener">DKIST telluric atlas</a> (<a href="https://doi.org/10.5281/zenodo.13922153" target="_blank" rel="noopener">doi:10.5281/zenodo.13922153</a>; files v20260407; BSD 3-clause, <a href="LICENSE-dkist_telluric_atlas.txt">notice</a>). It was synthesized with Py4CAtS (Schreier et al. 2019) from <a href="https://hitran.org" target="_blank" rel="noopener">HITRAN</a> line parameters.</li>
+              <li>The solar pseudo-transmittance spectrum (2020-07-20, disk-integrated) is by G. C. Toon, <a href="https://mark4sun.jpl.nasa.gov/toon/solar/solar_spectrum.html" target="_blank" rel="noopener">JPL</a>.</li>
               <li>3D view drawn with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>.</li>
             </ul>
+            <h3>Acknowledgement</h3>
+            <p>The observation-effects starting values come from DKIST/Cryo-NIRSP observations, and the telluric atlas was made for DKIST. The Daniel K. Inouye Solar Telescope (DKIST) is a facility of the U.S. National Science Foundation. DKIST is operated by the National Solar Observatory under a cooperative agreement with the Association of Universities for Research in Astronomy, Inc. DKIST is located on land of spiritual and cultural significance to Native Hawaiian people. The use of this important site to further scientific knowledge is done with appreciation and respect.</p>
           </div>
         </div>
       </details>
@@ -500,9 +657,11 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   </main>
 </div>
 
-<!-- Bump ?v= whenever fe13_see_table.js or stokes_model.js changes: GitHub Pages lets browsers cache them for 10 min. -->
-<script src="fe13_see_table.js?v=4"></script>
-<script src="stokes_model.js?v=4"></script>
+<!-- Bump ?v= whenever any of these four files changes: GitHub Pages lets browsers cache them for 10 min. -->
+<script src="fe13_see_table.js?v=5"></script>
+<script src="stokes_model.js?v=5"></script>
+<script src="obs_atlas.js?v=5"></script>
+<script src="observe.js?v=5"></script>
 <script>
 (function () {
   "use strict";
@@ -517,13 +676,21 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   const meta = model.meta || {};
 
   // ---------- state ----------
-  const DEFAULTS = { height: 0.2, lat: 25, lon: 90, B: 20, inc: 30, azi: -60, logNe: 8.5, vnt: 25, vdop: 0, ref: "radial", norm: "1074", lock: false };
-  const state = Object.assign({}, DEFAULTS);
+  const DEFAULTS = { height: 0.2, lat: 25, lon: 90, B: 20, inc: 30, azi: -60, logNe: 8.5, vnt: 25, vdop: 0, ref: "radial", norm: "1074", lock: false,
+    win: "line" };
+  // Observation effects: all off; values from a fit to DKIST/Cryo-NIRSP Fe XIII 1074 nm data (see observe.js).
+  const FX_FLAGS = { fxKcor: false, fxStray: false, fxTell: false, fxXtalk: false, fxLsf: false, fxOverlay: true };
+  const FX_VALUES = { kScale: 1, sLevel: 3, sB: -40, sBp: 350, sPhi: 0, tScale: 2,
+    xIQ: -1.08, xIU: 0.26, xIV: 0.30, xVQ: 6.3, xVU: 4.7, xQV: -13.8, xUV: -49.5, lsfR: 56000 };
+  const state = Object.assign({}, DEFAULTS, FX_FLAGS, FX_VALUES);
   const SLIDERS = {
     height: { dec: 3 }, lat: { dec: 1 }, lon: { dec: 1 }, B: { dec: 1 }, inc: { dec: 1 }, azi: { dec: 1 },
     logNe: { dec: 2 }, vnt: { dec: 1 }, vdop: { dec: 1 },
+    kScale: { dec: 2 }, sLevel: { dec: 2 }, sB: { dec: 0 }, sBp: { dec: 0 }, sPhi: { dec: 0 }, tScale: { dec: 2 },
+    xIQ: { dec: 2 }, xIU: { dec: 2 }, xIV: { dec: 2 }, xVQ: { dec: 1 }, xVU: { dec: 1 }, xQV: { dec: 1 }, xUV: { dec: 1 }, lsfR: { dec: 0 },
   };
-  const NPTS = 241;
+  const NPTS = 241;              // samples across the "Line" window without observation effects
+  const OBS = (window.FE13_OBS_ATLAS && window.StokesObserve) ? window.StokesObserve.createObserver(window.FE13_OBS_ATLAS) : null;
   let last = null;           // last compute result
   let dlam = null;
   let hoverIdx = -1;
@@ -686,7 +853,32 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   }
   bindSeg("norm", "norm");
   bindSeg("ref", "ref");
+  bindSeg("win", "win");
   $("lock").addEventListener("change", function (e) { state.lock = e.target.checked; locked = null; schedule(); });
+
+  // ---------- observation effects ----------
+  function showFx() {
+    let on = 0;
+    Object.keys(FX_FLAGS).forEach(function (k) {
+      const box = $(k);
+      box.checked = state[k];
+      const body = box.closest(".fx").querySelector(".fx-body");
+      if (body) { body.hidden = !state[k]; if (state[k]) on++; }
+    });
+    // collapsing the card only hides the controls; the count shows what is still applied
+    $("fx-count").textContent = on ? "· " + on + " on" : "";
+  }
+  Object.keys(FX_FLAGS).forEach(function (k) {
+    $(k).addEventListener("change", function (e) { state[k] = e.target.checked; showFx(); locked = null; schedule(); });
+  });
+  $("fx-reset").addEventListener("click", function () { Object.assign(state, FX_VALUES); syncControls(); schedule(); });
+  if (OBS) showFx();
+  else {
+    $("fx-intro").textContent = "The atlas files obs_atlas.js and observe.js did not load, so observation effects are unavailable. Keep them in the same folder as this page.";
+    Object.keys(FX_FLAGS).forEach(function (k) { $(k).disabled = true; });
+    $("fx-reset").disabled = true;
+  }
+  function fxOn() { return !!OBS && (state.fxKcor || state.fxStray || state.fxTell || state.fxXtalk || state.fxLsf); }
 
   // ---------- plots ----------
   const PANELS = [
@@ -714,13 +906,13 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     p.canvas = cv; p.tip = tip; p.wrap = wrap;
     cv.addEventListener("pointermove", function (e) { const r = cv.getBoundingClientRect(); setHover(xToIndex(e.clientX - r.left, r.width), i); });
     cv.addEventListener("pointerleave", function () { setHover(-1, -1); });
-    cv.addEventListener("focus", function () { setHover(hoverIdx >= 0 ? hoverIdx : Math.floor(NPTS / 2), i); });
+    cv.addEventListener("focus", function () { setHover(hoverIdx >= 0 ? hoverIdx : Math.floor(dlam.length / 2), i); });
     cv.addEventListener("blur", function () { setHover(-1, -1); });
     cv.addEventListener("keydown", function (e) {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
-      const step = e.shiftKey ? 10 : 1;
-      setHover(Math.min(NPTS - 1, Math.max(0, (hoverIdx < 0 ? NPTS >> 1 : hoverIdx) + (e.key === "ArrowRight" ? step : -step))), i);
+      const step = Math.max(1, Math.round(dlam.length / NPTS)) * (e.shiftKey ? 10 : 1);
+      setHover(Math.min(dlam.length - 1, Math.max(0, (hoverIdx < 0 ? dlam.length >> 1 : hoverIdx) + (e.key === "ArrowRight" ? step : -step))), i);
     });
   });
   const M = { l: 50, r: 10, t: 8, b: 26 };
@@ -728,7 +920,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   function xToIndex(px, w) {
     const f = (px - M.l) / (w - M.l - M.r);
     if (f < -0.02 || f > 1.02) return -1;
-    return Math.round(Math.min(1, Math.max(0, f)) * (NPTS - 1));
+    return Math.round(Math.min(1, Math.max(0, f)) * (dlam.length - 1));
   }
   function setHover(i, panel) { hoverIdx = i; hoverPanel = panel; drawPlots(); }
 
@@ -752,10 +944,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     last.lines.forEach(function (ln, n) {
       const div = state.norm === "own" ? ln.Ipeak : ref;
       const f = (p.pct ? 100 : 1) / div;
-      const src = ln.prof[p.key];
-      const y = new Float64Array(src.length);
-      for (let i = 0; i < src.length; i++) y[i] = src[i] * f;
-      out.push({ y: y, color: n === 0 ? "--s1074" : "--s1079", name: n === 0 ? "1074.6 nm" : "1079.8 nm" });
+      const scaled = function (src) { const y = new Float64Array(src.length); for (let i = 0; i < src.length; i++) y[i] = src[i] * f; return y; };
+      const color = n === 0 ? "--s1074" : "--s1079", name = n === 0 ? "1074.7 nm" : "1079.8 nm";
+      if (ln.obs) {
+        out.push({ y: scaled(ln.obs[p.key]), color: color, name: name + " observed" });
+        if (state.fxOverlay) out.push({ y: scaled(ln.prof[p.key]), color: color, name: name + " coronal", dash: true });
+      } else out.push({ y: scaled(ln.prof[p.key]), color: color, name: name });
     });
     return out;
   }
@@ -817,14 +1011,17 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       // series
       ctx.save();
       ctx.beginPath(); ctx.rect(M.l, M.t - 2, pw, ph + 4); ctx.clip();
-      ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
       for (let s = series.length - 1; s >= 0; s--) {
         const ys = series[s].y;
+        ctx.lineWidth = series[s].dash ? 1.25 : 2;
+        ctx.setLineDash(series[s].dash ? [5, 4] : []);
         ctx.strokeStyle = cssVar(series[s].color);
         ctx.beginPath();
         for (let i = 0; i < ys.length; i++) { const xx = X(dlam[i]), yy = Y(ys[i]); if (i) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); }
         ctx.stroke();
       }
+      ctx.setLineDash([]);
       ctx.restore();
       // crosshair
       if (hoverIdx >= 0) {
@@ -832,6 +1029,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
         ctx.strokeStyle = ink3; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(xx, M.t); ctx.lineTo(xx, M.t + ph); ctx.stroke();
         series.forEach(function (s) {
+          if (s.dash) return;
           const yy = Y(s.y[hoverIdx]);
           if (yy < M.t - 2 || yy > M.t + ph + 2) return;
           ctx.beginPath(); ctx.arc(X(dlam[hoverIdx]), yy, 4, 0, 2 * Math.PI);
@@ -906,7 +1104,13 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       banner.append(document.createTextNode("This voxel is seen against the disk. The profiles ignore the photospheric background."));
     } else banner.hidden = true;
     plotsEl.classList.toggle("dim", g.visibility === "occulted");
-    $("scale-note").textContent = state.norm === "own" ? "Each line divided by its own Stokes I peak" : "Both lines divided by the 1074.6 nm Stokes I peak";
+    const fxNow = !!last.fx;
+    $("scale-note").textContent = (state.norm === "own" ? "Each line divided by its own " : "Both lines divided by the 1074.7 nm ") +
+      (fxNow ? "line's Stokes I peak; observation effects on" : "Stokes I peak");
+    $("lg-coronal").hidden = !(fxNow && state.fxOverlay);
+    const k0 = fxNow && last.kcor && last.kcor[0];
+    $("kcor-readout").textContent = k0 ? "This voxel: continuum " + (100 * k0.I / last.fx.P).toFixed(1) + "% of the 1074.7 nm line peak, pB/I = " +
+      (100 * k0.pB / k0.I).toFixed(0).replace("-", "−") + "%." : "";
 
     const I0 = last.lines[0].eps.I;
     last.lines.forEach(function (ln, n) {
@@ -930,11 +1134,58 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     const sigMax = Math.max.apply(null, model.lines.map((L) => model.dopplerSigma(L, model.Te, state.vnt)));
     const shift = Math.abs(state.vdop) / 3e5 * 10800;
     const half = Math.max(3, Math.ceil((4.2 * sigMax + shift) * 2) / 2);
-    if (!dlam || dlam[dlam.length - 1] !== half) {
-      dlam = new Float64Array(NPTS);
-      for (let i = 0; i < NPTS; i++) dlam[i] = -half + (2 * half) * i / (NPTS - 1);
+    let W = state.win === "line" ? half : Number(state.win);
+    if (fxOn()) {
+      // Work on the atlas samples (0.01 A), with a margin for the line-spread function, then crop to +/-W.
+      const margin = state.fxLsf ? 4.5 * Math.max(OBS.lsfSigma(0, state.lsfR), OBS.lsfSigma(1, state.lsfR)) + 2 * OBS.step : 0;
+      W = Math.min(W, OBS.limit - margin);
+      const g = OBS.grid(-W - margin, W + margin);
+      const res = model.compute(state, g.dl);
+      let a = 0, b = g.dl.length - 1;
+      while (g.dl[a] < -W - 1e-9) a++;
+      while (g.dl[b] > W + 1e-9) b--;
+      const crop = (y) => y.slice(a, b + 1);
+      // instrumental terms live in the solar-north frame: rot = 2 x (angle from north to the displayed +Q)
+      let beta = 0;
+      if (state.ref !== "north" && res.geo.refDefined) beta = SM.fieldPositionAngleDeg(res.geo.loc, [0, 0, 1], [1, 0, 0]) * DEG;
+      const L0 = res.lines[0];
+      const opts = {
+        P: L0.eps.I / (Math.sqrt(2 * Math.PI) * L0.prof.sigmaA),     // coronal 1074 I peak
+        rot: 2 * beta,
+        stray: state.fxStray ? { level: state.sLevel, gB: state.sB, bperp: state.sBp, phi: state.sPhi * DEG } : null,
+        telluric: state.fxTell ? { scale: state.tScale } : null,
+        xtalk: state.fxXtalk ? { IQ: state.xIQ / 100, IU: state.xIU / 100, IV: state.xIV / 100, VQ: state.xVQ / 100, VU: state.xVU / 100,
+          QV: state.xQV / 100, UV: state.xUV / 100 } : null,
+        lsf: state.fxLsf ? { R: state.lsfR } : null,
+      };
+      // the voxel's Thomson-scattered K corona: pB is Q in the radial frame
+      const sin2chi = Math.pow(Math.sin(res.geo.scatteringAngle * DEG), 2);
+      const betaR = res.geo.rhoPOS > 1e-9 ? SM.fieldPositionAngleDeg(res.geo.loc, [0, 0, 1], [1, 0, 0]) * DEG : 0;
+      res.kcor = state.fxKcor ? res.lines.map(function (ln, n) {
+        const k = OBS.thomson(n, state.height, Math.pow(10, state.logNe), sin2chi);
+        if (!k) return null;
+        const I = state.kScale * k.I, pB = state.kScale * k.pB;
+        return state.ref === "north" ? { I: I, Q: pB * Math.cos(2 * betaR), U: pB * Math.sin(2 * betaR), pB: pB }
+          : { I: I, Q: pB, U: 0, pB: pB };
+      }) : null;
+      res.lines.forEach(function (ln, n) {
+        opts.kcor = res.kcor ? res.kcor[n] : null;
+        const ob = OBS.observe(n, g.i0, ln.prof, opts);
+        ln.obs = { I: crop(ob.I), Q: crop(ob.Q), U: crop(ob.U), V: crop(ob.V) };
+        ln.prof = { I: crop(ln.prof.I), Q: crop(ln.prof.Q), U: crop(ln.prof.U), V: crop(ln.prof.V), sigmaA: ln.prof.sigmaA };
+      });
+      res.fx = opts;
+      dlam = crop(g.dl);
+      last = res;
+    } else {
+      const n = state.win === "line" ? NPTS : Math.round(2 * W / 0.02) + 1;
+      if (!dlam || dlam.length !== n || dlam[0] !== -W || dlam[n - 1] !== W) {
+        dlam = new Float64Array(n);
+        for (let i = 0; i < n; i++) dlam[i] = -W + (2 * W) * i / (n - 1);
+      }
+      last = model.compute(state, dlam);
     }
-    last = model.compute(state, dlam);
+    if (hoverIdx >= dlam.length) hoverIdx = -1;
     updateReadouts();
     drawPlots();
     if (window.scene3d) window.scene3d.update(last, state);
@@ -946,14 +1197,31 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   $("copy").addEventListener("click", function () {
     const btn = $("copy");
     const head = ["dlambda_A"];
-    last.lines.forEach(function (ln, n) { ["I", "Q", "U", "V"].forEach((k) => head.push(k + "_" + (n ? "1079" : "1074"))); });
-    const rows = ["# Fe XIII Stokes emission coefficients, photons cm^-3 s^-1 arcsec^-2 A^-1; " +
+    const fx = last.fx;
+    const sets = fx ? [["obs", "_obs"], ["prof", "_line"]] : [["prof", ""]];
+    sets.forEach(function ([src, tag]) {
+      last.lines.forEach(function (ln, n) { ["I", "Q", "U", "V"].forEach((k) => head.push(k + "_" + (n ? "1079" : "1074") + tag)); });
+    });
+    const rows = ["# Fe XIII Stokes emission coefficients, photons cm^-3 s^-1 arcsec^-2 A^-1; Te=" + model.Te.toFixed(0) + " K " +
       "h=" + state.height + " Rsun lat=" + state.lat + " lon=" + state.lon + " |B|=" + state.B + " G inc=" + state.inc +
       " azi=" + state.azi + " log_ne=" + state.logNe + " vnt=" + state.vnt + " vdop=" + state.vdop + " ref=" + state.ref +
-      (last.zeroField ? " (zero-field limit: alignment along the local vertical, inc/azi unused)" : ""), head.join(",")];
+      (last.zeroField ? " (zero-field limit: alignment along the local vertical, inc/azi unused)" : "")];
+    if (fx) {
+      const parts = [];
+      if (last.kcor) parts.push("Thomson K corona x" + state.kScale + " (continuum/line peak = " + (last.kcor[0].I / fx.P).toExponential(3) + ")");
+      if (fx.stray) parts.push("scattered light level=" + state.sLevel + " x coronal 1074 I peak, gB_LOS=" + state.sB + " G, Bperp=" + state.sBp + " G, phi=" + state.sPhi + " deg");
+      if (fx.telluric) parts.push("telluric T^" + state.tScale);
+      if (fx.xtalk) parts.push("crosstalk % IQ=" + state.xIQ + " IU=" + state.xIU + " IV=" + state.xIV + " VQ=" + state.xVQ + " VU=" + state.xVU + " QV=" + state.xQV + " UV=" + state.xUV + " (solar-north frame)");
+      if (fx.lsf) parts.push("Gaussian LSF R=" + state.lsfR);
+      rows.push("# _obs columns include observation effects: " + parts.join("; ") +
+        ". dlambda from rest air wavelengths 10746.5 / 10798.0 A; _line columns are the Fe XIII line emission alone");
+    }
+    rows.push(head.join(","));
     for (let i = 0; i < dlam.length; i++) {
       const r = [dlam[i].toFixed(4)];
-      last.lines.forEach(function (ln) { ["I", "Q", "U", "V"].forEach((k) => r.push(ln.prof[k][i].toExponential(6))); });
+      sets.forEach(function ([src]) {
+        last.lines.forEach(function (ln) { ["I", "Q", "U", "V"].forEach((k) => r.push(ln[src][k][i].toExponential(6))); });
+      });
       rows.push(r.join(","));
     }
     const text = rows.join("\n");

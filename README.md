@@ -1,7 +1,17 @@
 # Fe XIII Stokes Explorer
 
-An interactive forward model of the polarized emission of the coronal Fe XIII 1074.6 nm and 1079.8 nm lines from a
+An interactive forward model of the polarized emission of the coronal Fe XIII 1074.7 nm and 1079.8 nm lines from a
 single plasma voxel. Move the voxel above the Sun, orient its magnetic field, and watch Stokes I, Q, U and V respond.
+
+The page models one point, not a line of sight, which is the same single-point picture behind inversions such as CLEDB.
+Real observations sum the emission of every voxel along the line of sight, weighted by its emissivity. That mixes
+densities, temperatures and field directions:
+- linear polarization from differently oriented fields partly cancels;
+- V averages B_LOS;
+- the 1079/1074 ratio leans toward the densest plasma;
+- the K corona collects every electron.
+
+These effects are often not negligible.
 
 **Live page:** https://yjzhu-solar.github.io/pycelp_interactive/
 
@@ -17,8 +27,11 @@ line-of-sight geometry, the Q/U reference and the line profiles.
 |---|---|
 | `index.html` | The page: 3D view (three.js), controls, Stokes plots |
 | `stokes_model.js` | Port of `pycelp.emissionLine.calc_PolEmissCoeff` / `calc_stokesSpec` plus the voxel geometry |
-| `fe13_see_table.js` | Pre-computed table: 31 densities × 40 heights × 11 values of cos²θ_B, 749-level Fe XIII, T_e = 2.0 MK |
+| `fe13_see_table.js` | Pre-computed table: 31 densities × 40 heights × 11 values of cos²θ_B, 749-level Fe XIII, T_e = 10^6.22 K ≈ 1.66 MK (the peak of the Fe XIII contribution function) |
 | `build_see_table.py` | Regenerates the table with pyCELP |
+| `observe.js` | Optional observation effects: scattered photospheric light, telluric absorption, crosstalk, spectral resolution |
+| `obs_atlas.js` | Telluric transmission and solar spectrum within ±25 Å of each line, sampled at 0.01 Å, plus pyCELP's J00 and ω versus height for the K corona (59 kB) |
+| `build_obs_atlas.py` | Regenerates `obs_atlas.js` from the full atlases |
 
 The page opens directly from disk as well; it needs an internet connection only for the fonts and three.js.
 
@@ -26,16 +39,41 @@ The page opens directly from disk as well; it needs an internet connection only 
 
 ```bash
 export XUVTOP=/path/to/chianti/dbase      # CHIANTI database
-python build_see_table.py                 # all levels, ~40 min on 10 cores
+python build_see_table.py --log-te 6.22   # all levels, ~50 min on 10 cores
 python build_see_table.py --nlevels 100 --out fe13_see_table_100.js   # ~30 s
 ```
 
-After regenerating the table or editing `stokes_model.js`, bump the `?v=` number on both `<script src>` tags in
+After regenerating a data file or editing a script, bump the `?v=` number on all four `<script src>` tags in
 `index.html`. GitHub Pages lets browsers cache these files for 10 minutes, and the version number makes a refreshed page
 fetch matching copies.
 
 The script checks the interpolation against direct pyCELP solutions at random off-grid points. The current table
 interpolates C to within 0.2% and the alignment to within 4×10⁻⁴.
+
+## Observation effects
+
+The "Observation effects" card, off by default, turns the coronal profiles into a schematic observed spectrum. The
+"Window" toggle widens the plots from the line to ±20 Å, about the full DKIST/Cryo-NIRSP spectral window. The effects
+apply in the order light meets them:
+
+0. **K corona**: the voxel's own Thomson scattering, as in pyCELP's `Example_PSI_model_synthesis` notebook. It uses
+   J00 and ω from `pycelp.allenSolRad`, tabulated in `obs_atlas.js`. It is a flat continuum, polarized tangentially, with
+   a scale slider for line-of-sight effects.
+1. **Scattered photospheric light** (sky aureole and instrument): the disk-integrated solar spectrum, with its continuum
+   at a chosen multiple of the coronal 1074.7 nm I peak. It carries weak-field Zeeman V and Q/U from one effective
+   photospheric field.
+2. **Telluric absorption**: T(λ)^scale on all four Stokes parameters.
+3. **Polarimetric crosstalk**: I→Q, I→U, I→V, V→Q, V→U, Q→V and U→V in a fixed solar-north frame.
+4. **Spectrograph resolution**: a Gaussian line-spread function of FWHM λ/R.
+
+This follows the DKIST/Cryo-NIRSP spectral model of T. Schad (Schad et al. 2024, *Science Advances* 10, eadq1604).
+Starting values are rounded from a fit to Cryo-NIRSP 1074.7 nm data. The atlases sit relative to the Cryo-NIRSP rest air
+wavelengths, 1074.65 and 1079.80 nm, rather than CHIANTI's 1074.615 and 1079.780 nm. The model leaves out noise, the
+F corona, atlas velocity shifts, and per-line scattered-light amplitudes.
+
+```bash
+python build_obs_atlas.py --atlas-dir /path/to/Cryo_Line_Artifact/atlas
+```
 
 ## Conventions
 
@@ -56,4 +94,17 @@ then have no effect. The unsaturated Hanle regime between 0 and ~10⁻⁵ G is n
   `stokes_model.js` is derived from pyCELP code and is redistributed under its BSD 3-clause licence; see
   [`LICENSE-pycelp.txt`](LICENSE-pycelp.txt).
 - Atomic data: CHIANTI 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).
+- Observation-effects model: T. Schad's Cryo-NIRSP spectral model, Schad et al. (2024), *Science Advances* 10, eadq1604,
+  https://doi.org/10.1126/sciadv.adq1604.
+- Telluric transmission: T. Schad, DKIST telluric atlas, https://github.com/tschad/dkist_telluric_atlas,
+  https://doi.org/10.5281/zenodo.13922153 (files v20260407, HITRAN2024 line list; BSD 3-clause, see
+  [`LICENSE-dkist_telluric_atlas.txt`](LICENSE-dkist_telluric_atlas.txt)). It was computed with Py4CAtS
+  (Schreier et al. 2019, *Atmosphere* 10, 262) from HITRAN line parameters (https://hitran.org).
+- Solar pseudo-transmittance spectrum (version 2020-07-20, disk-integrated): G. C. Toon, JPL,
+  https://mark4sun.jpl.nasa.gov/toon/solar/solar_spectrum.html.
 - 3D rendering: three.js, loaded from jsDelivr.
+
+## Acknowledgement
+
+The observation-effects starting values come from DKIST/Cryo-NIRSP observations, and the telluric atlas was made for
+DKIST. The Daniel K. Inouye Solar Telescope (DKIST) is a facility of the U.S. National Science Foundation. DKIST is operated by the National Solar Observatory under a cooperative agreement with the Association of Universities for Research in Astronomy, Inc. DKIST is located on land of spiritual and cultural significance to Native Hawaiian people. The use of this important site to further scientific knowledge is done with appreciation and respect.
