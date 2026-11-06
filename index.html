@@ -186,6 +186,7 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--rule); color: var(--ink-2); }
 .note { margin: 0; font-size: 12px; color: var(--ink-3); }
+.ctl.unused { opacity: 0.5; }
 
 /* ---------- spectra panel ---------- */
 .spectra { padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -340,6 +341,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <span class="num"><input id="B-n" type="number" aria-label="Field strength in gauss" inputmode="decimal"><span class="u">G</span></span>
             <input id="B" type="range" min="0" max="100" step="0.5">
           </div>
+          <p class="note" id="zero-field-note" aria-live="polite" hidden>|<span class="m">B</span>| = 0: with no field, the atoms align along the symmetry axis of the photospheric radiation, the local vertical. I, Q and U are those of a radial field, V = 0, and the inclination and azimuth have no effect. For any |<span class="m">B</span>| &gt; 0 the page uses pyCELP's saturated Hanle regime (valid above ~10<sup>−5</sup> G): Q and U follow the field direction, whatever its strength.</p>
           <div class="ctl">
             <label for="inc">Inclination <span class="m">θ<sub>B</sub></span> from vertical</label>
             <span class="num"><input id="inc-n" type="number" aria-label="Inclination from the local vertical in degrees" inputmode="decimal"><span class="u">°</span></span>
@@ -479,6 +481,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
               <li>+x points to the observer, +z is solar north, +y is solar west. The line of sight is taken parallel to +x.</li>
               <li><span class="m">ψ</span><sub>B</sub> is the counter-clockwise rotation, as seen by the observer, from the +Q reference to the plane-of-sky field. The polarization angle χ = ½ atan2(U, Q) is measured the same way (IAU sense).</li>
               <li>Radial reference: Q &lt; 0 means polarization tangential to the limb. Solar north: a fixed frame for all positions, angles measured north through east.</li>
+              <li>pyCELP assumes the saturated Hanle regime, valid for these lines above ~10<sup>−5</sup> G: the alignment is quantized along <span class="m">B</span>, so Q and U follow the field direction at any strength and |<span class="m">B</span>| enters only V. At |<span class="m">B</span>| = 0 there is no field direction. The page then aligns the atoms along the local vertical, the symmetry axis of the photospheric radiation, which gives the radial-field result with V = 0. The unsaturated Hanle regime between 0 and ~10<sup>−5</sup> G is not modelled.</li>
               <li>The profiles are emission coefficients of one voxel, not line-of-sight integrals. Occultation and the disk background are not applied to the spectra.</li>
             </ul>
           </div>
@@ -498,8 +501,8 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
 </div>
 
 <!-- Bump ?v= whenever fe13_see_table.js or stokes_model.js changes: GitHub Pages lets browsers cache them for 10 min. -->
-<script src="fe13_see_table.js?v=3"></script>
-<script src="stokes_model.js?v=3"></script>
+<script src="fe13_see_table.js?v=4"></script>
+<script src="stokes_model.js?v=4"></script>
 <script>
 (function () {
   "use strict";
@@ -868,11 +871,19 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   };
   function updateReadouts() {
     const g = last.geo;
-    $("hud-thetaB").textContent = g.thetaB.toFixed(1) + "°";
-    $("hud-ThetaB").textContent = g.ThetaB.toFixed(1) + "°";
-    const undef = g.bPerp < 1e-6 || !g.refDefined;
-    $("hud-psiB").textContent = undef ? "undefined" : signed(g.psiB, 1) + "°";
-    $("hud-gamma").textContent = "pycelp azimuthBLOSdeg = " + (undef ? "undefined" : signed(g.gammaB, 1) + "°");
+    const zero = !!last.zeroField;
+    $("zero-field-note").hidden = !zero;
+    ["inc", "azi"].forEach((id) => $(id).closest(".ctl").classList.toggle("unused", zero));
+    if (zero) {
+      ["hud-thetaB", "hud-ThetaB", "hud-psiB"].forEach((id) => { $(id).textContent = "–"; });
+      $("hud-gamma").textContent = "|B| = 0: no field direction";
+    } else {
+      $("hud-thetaB").textContent = g.thetaB.toFixed(1) + "°";
+      $("hud-ThetaB").textContent = g.ThetaB.toFixed(1) + "°";
+      const undef = g.bPerp < 1e-6 || !g.refDefined;
+      $("hud-psiB").textContent = undef ? "undefined" : signed(g.psiB, 1) + "°";
+      $("hud-gamma").textContent = "pycelp azimuthBLOSdeg = " + (undef ? "undefined" : signed(g.gammaB, 1) + "°");
+    }
     const st = STATUS[g.visibility];
     const el = $("status");
     el.innerHTML = st.icon;
@@ -938,7 +949,8 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     last.lines.forEach(function (ln, n) { ["I", "Q", "U", "V"].forEach((k) => head.push(k + "_" + (n ? "1079" : "1074"))); });
     const rows = ["# Fe XIII Stokes emission coefficients, photons cm^-3 s^-1 arcsec^-2 A^-1; " +
       "h=" + state.height + " Rsun lat=" + state.lat + " lon=" + state.lon + " |B|=" + state.B + " G inc=" + state.inc +
-      " azi=" + state.azi + " log_ne=" + state.logNe + " vnt=" + state.vnt + " vdop=" + state.vdop + " ref=" + state.ref, head.join(",")];
+      " azi=" + state.azi + " log_ne=" + state.logNe + " vnt=" + state.vnt + " vdop=" + state.vdop + " ref=" + state.ref +
+      (last.zeroField ? " (zero-field limit: alignment along the local vertical, inc/azi unused)" : ""), head.join(",")];
     for (let i = 0; i < dlam.length; i++) {
       const r = [dlam[i].toFixed(4)];
       last.lines.forEach(function (ln) { ["I", "Q", "U", "V"].forEach((k) => r.push(ln.prof[k][i].toExponential(6))); });
@@ -1208,17 +1220,20 @@ function update(res) {
   setLine(losLine, [new THREE.Vector3(-3.4, loc.y, loc.z), new THREE.Vector3(3.6, loc.y, loc.z)]);
   localPOS.position.copy(loc);
 
+  // |B| = 0: no field direction to draw (the emission uses the local vertical, see stokes_model.js)
+  const zero = !!res.zeroField;
   const LB = 0.95;
-  setArrow(aB, loc, b, LB);
+  setArrow(aB, loc, b, zero ? 0 : LB);
   setArrow(aR, loc, r, 0.66);
   setArrow(aLOS, loc, X, 0.7);
+  tB.visible = !zero;
   tB.position.copy(loc.clone().add(b.clone().multiplyScalar(LB + 0.07)));
 
   // plane-of-sky projection of B
   const bp = new THREE.Vector3(0, b.y, b.z);
   const tip = loc.clone().add(b.clone().multiplyScalar(LB));
   const ptip = loc.clone().add(bp.clone().multiplyScalar(LB));
-  const hasBp = bp.length() > 1e-4;
+  const hasBp = !zero && bp.length() > 1e-4;
   bPerpLine.visible = hasBp; dropLine.visible = hasBp && Math.abs(b.x) > 1e-3;
   if (hasBp) { setLine(bPerpLine, [loc, ptip]); setLine(dropLine, [tip, ptip]); }
 
@@ -1230,10 +1245,10 @@ function update(res) {
   tQ.visible = hasRef; if (hasRef) tQ.position.copy(loc.clone().add(refp.clone().multiplyScalar(0.66)));
 
   // angle arcs
-  const pTh = arcBetween(loc, r, b, 0.38);
+  const pTh = zero ? null : arcBetween(loc, r, b, 0.38);
   setTube(arcTheta, pTh);
   tTh.visible = !!pTh; if (pTh) tTh.position.copy(pTh[pTh.length >> 1].clone().sub(loc).multiplyScalar(1.28).add(loc));
-  const pTH = arcBetween(loc, X, b, 0.54);
+  const pTH = zero ? null : arcBetween(loc, X, b, 0.54);
   setTube(arcBigTheta, pTH);
   tTH.visible = !!pTH; if (pTH) tTH.position.copy(pTH[pTH.length >> 1].clone().sub(loc).multiplyScalar(1.2).add(loc));
   // psi: rotate the +Q reference about +x (counter-clockwise for the observer) onto the projected field

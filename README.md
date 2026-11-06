@@ -44,6 +44,12 @@ reference (radial or solar north), with angles counter-clockwise as seen by the 
 I(⊥B⊥) − I(∥B⊥), so its +Q at zero azimuth is perpendicular to the projected field. The page therefore passes
 `azimuthBLOSdeg = 90° − ψ_B`, where ψ_B is the counter-clockwise angle from the reference to the projected field.
 
+pyCELP assumes the saturated Hanle regime, valid for these lines above ~10⁻⁵ G. The alignment is quantized along B, so
+I, Q and U depend on the field direction but not on |B|, which enters only V. At |B| = 0 there is no direction to align
+to, so the page uses the unmagnetized limit instead. The atoms align along the local vertical, the symmetry axis of the
+photospheric radiation. This equals pyCELP's result for a radial field, with V = 0, and the inclination and azimuth
+then have no effect. The unsaturated Hanle regime between 0 and ~10⁻⁵ G is not modelled.
+
 ## Credits
 
 - pyCELP by T. Schad: Schad & Dima (2020), *Solar Physics* 295, 98, https://doi.org/10.1007/s11207-020-01669-1.

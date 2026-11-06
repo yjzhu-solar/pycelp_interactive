@@ -226,13 +226,24 @@
       };
     }
 
-    /** Everything the page needs for one state. state adds {B, logNe, vnt, vdop} and dlam (A). */
+    /** Everything the page needs for one state. state adds {B, logNe, vnt, vdop} and dlam (A).
+     *
+     *  pyCELP assumes the saturated Hanle regime: the atomic alignment is quantized along B and only the
+     *  direction of B enters I, Q, U (|B| enters V alone). That holds once the Larmor frequency exceeds the
+     *  upper-level decay rate, i.e. for |B| above ~1e-6 to 1e-5 G, but not at |B| = 0, where there is no
+     *  direction to align to. With no field the alignment is about the symmetry axis of the photospheric
+     *  radiation, the local vertical. A field along that axis does not change the density matrix, so the
+     *  zero-field I, Q, U are pyCELP's for a radial field (theta_B = 0) and V = 0, whatever inc/azi say.
+     *  geo keeps describing the inc/azi direction (for display); emission uses alignGeo. Fields between 0
+     *  and saturation (the unsaturated Hanle regime) are not modelled. */
     function compute(s, dlam) {
+      const zeroField = !(s.B > 0);
       const geo = geometry(s);
-      const seeVals = see(s.logNe, s.height, geo.thetaB);
+      const alignGeo = zeroField ? geometry(Object.assign({}, s, { inc: 0, azi: 0 })) : geo;
+      const seeVals = see(s.logNe, s.height, alignGeo.thetaB);
       const out = lines.map((L, n) => {
         const { C, sigma } = seeVals[n];
-        const eps = emissionCoefficients(L, C, sigma, s.B, geo.ThetaB, geo.gammaB);
+        const eps = emissionCoefficients(L, C, sigma, zeroField ? 0 : s.B, alignGeo.ThetaB, alignGeo.gammaB);
         const prof = profiles(L, eps, table.Te, s.vnt, s.vdop, dlam);
         let imax = 0, vmax = 0;
         for (let i = 0; i < dlam.length; i++) {
@@ -243,7 +254,7 @@
         const chi = 0.5 * Math.atan2(eps.U, eps.Q) / DEG;   // polarization angle, CCW from reference
         return { line: L, C, sigma, eps, prof, Ipeak: imax, Vext: vmax, L_I, Q_I: eps.Q / eps.I, U_I: eps.U / eps.I, chi };
       });
-      return { geo, lines: out };
+      return { geo, alignGeo, zeroField, lines: out };
     }
 
     return { lines, limits, Te: table.Te, meta: table.meta, grid: table.grid, see, emissionCoefficients,
