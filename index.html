@@ -279,12 +279,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
 <div class="shell">
   <header class="masthead">
     <div class="titles">
-      <p class="eyebrow">pyCELP forward synthesis · single coronal voxel</p>
+      <p class="eyebrow">pyCELP forward synthesis · single-point emission, no line-of-sight integration</p>
       <h1>Fe XIII Stokes Explorer</h1>
-      <p class="lede">Place a plasma voxel above the Sun, orient its magnetic field, and watch the polarized emission of Fe XIII 1074.7 nm and 1079.8 nm respond. Atomic level populations and alignments come from a pre-computed pyCELP table; the viewing geometry and the spectra are evaluated live in your browser.</p>
+      <p class="lede">Place a parcel of coronal plasma above the Sun, orient its magnetic field, and watch the polarized emission of Fe XIII 1074.7 nm and 1079.8 nm respond. Atomic level populations and alignments come from a pre-computed pyCELP table; the viewing geometry and the spectra are evaluated live in your browser.</p>
       <details class="caveat">
         <summary><b>One point, not a line of sight</b><span>why real observations differ</span></summary>
-        <p>Like single-point inversions such as CLEDB, the page treats all the light as coming from one voxel. A real coronal line of sight crosses plasma with different densities, temperatures and field directions, and the observed profiles are emissivity-weighted sums along it. Linear polarization from differently oriented fields partly cancels, V averages <span class="m">B</span><sub>LOS</sub>, the 1079/1074 ratio leans toward the densest plasma, and the K corona collects every electron. These effects are often not negligible.</p>
+        <p>Like single-point inversions such as CLEDB, the page treats all the light as coming from one point. A real coronal line of sight crosses plasma with different densities, temperatures and field directions, and the observed profiles are emissivity-weighted sums along it. Linear polarization from differently oriented fields partly cancels, V averages <span class="m">B</span><sub>LOS</sub>, the 1079/1074 ratio leans toward the densest plasma, and the K corona collects every electron. These effects are often not negligible.</p>
       </details>
     </div>
     <div class="provenance" id="provenance" aria-label="Model details"></div>
@@ -329,7 +329,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
 
       <div class="controls">
         <fieldset class="card" id="fs-voxel">
-          <legend>Plasma voxel</legend>
+          <legend>Emitting point</legend>
           <div class="ctl">
             <label for="height">Height <span class="m">h</span></label>
             <span class="num"><input id="height-n" type="number" aria-label="Height in solar radii" inputmode="decimal"><span class="u">R<sub>☉</sub></span></span>
@@ -345,7 +345,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <span class="num"><input id="lon-n" type="number" aria-label="Longitude in degrees" inputmode="decimal"><span class="u">°</span></span>
             <input id="lon" type="range" min="-180" max="180" step="0.5">
           </div>
-          <div class="presets" role="group" aria-label="Voxel position presets">
+          <div class="presets" role="group" aria-label="Position presets">
             <span class="lab">Place at</span>
             <button type="button" class="btn" data-place="west">West limb</button>
             <button type="button" class="btn" data-place="east">East limb</button>
@@ -353,7 +353,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <button type="button" class="btn" data-place="front">In front, lon −40°</button>
             <button type="button" class="btn" data-place="random" title="Random position above the limb at the current height, uniform over the visible part of the sphere">Random</button>
           </div>
-          <p class="note">Longitude ±90° puts the voxel in the plane of the sky; positive is west.</p>
+          <p class="note">Longitude ±90° puts the point in the plane of the sky; positive is west.</p>
         </fieldset>
 
         <fieldset class="card" id="fs-field">
@@ -382,7 +382,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <button type="button" class="btn" data-field="reverse" title="B → −B: same I, Q, U; Stokes V changes sign">Reverse B</button>
             <button type="button" class="btn" data-field="mirror" title="Reflect B across the plane holding the local vertical and the LOS: θB and ΘB unchanged, ψB → −ψB in the radial frame">Mirror</button>
             <button type="button" class="btn" data-field="random" title="Random field direction, uniform over the sphere; strength unchanged">Random</button>
-            <button type="button" class="btn" data-field="twin" title="Paraschiv &amp; Judge (2022) degeneracy: mirror the voxel across the plane of the sky and turn B⊥ by 180°, keeping B_LOS. Every Stokes profile of both lines stays the same.">Ambiguous twin</button>
+            <button type="button" class="btn" data-field="twin" title="Paraschiv &amp; Judge (2022) degeneracy: mirror the point across the plane of the sky and turn B⊥ by 180°, keeping B_LOS. Every Stokes profile of both lines stays the same.">Ambiguous twin</button>
           </div>
           <p class="note" id="field-note" aria-live="polite" hidden></p>
         </fieldset>
@@ -466,11 +466,11 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <div class="ctl-grid">
               <div class="ctl">
                 <label for="kScale">Scale</label>
-                <span class="num"><input id="kScale-n" type="number" aria-label="K-corona continuum relative to this voxel's Thomson scattering" inputmode="decimal"><span class="u">× voxel</span></span>
+                <span class="num"><input id="kScale-n" type="number" aria-label="K-corona continuum relative to the Thomson scattering at this point" inputmode="decimal"><span class="u">× local</span></span>
                 <input id="kScale" type="range" min="0" max="10" step="0.05">
               </div>
             </div>
-            <p class="note"><span id="kcor-readout"></span> Photospheric light scattered by this voxel's free electrons, as in pyCELP's PSI synthesis example: a flat continuum, polarized tangentially to the limb (Q &lt; 0 in the radial frame), that follows the density, height and scattering angle. Along a real line of sight all electrons contribute, not only those at Fe XIII temperatures, so the observed continuum relative to the line can be several times the single-voxel value.</p>
+            <p class="note"><span id="kcor-readout"></span> Photospheric light scattered by the free electrons at this point, as in pyCELP's PSI synthesis example: a flat continuum, polarized tangentially to the limb (Q &lt; 0 in the radial frame), that follows the density, height and scattering angle. Along a real line of sight all electrons contribute, not only those at Fe XIII temperatures, so the observed continuum relative to the line can be several times this single-point value.</p>
           </div>
         </div>
         <div class="fx">
@@ -605,7 +605,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
               <li><span class="m">ψ</span><sub>B</sub> is the counter-clockwise rotation, as seen by the observer, from the +Q reference to the plane-of-sky field. The polarization angle χ = ½ atan2(U, Q) is measured the same way (IAU sense).</li>
               <li>Radial reference: Q &lt; 0 means polarization tangential to the limb. Solar north: a fixed frame for all positions, angles measured north through east.</li>
               <li>pyCELP assumes the saturated Hanle regime, valid for these lines above ~10<sup>−5</sup> G: the alignment is quantized along <span class="m">B</span>, so Q and U follow the field direction at any strength and |<span class="m">B</span>| enters only V. At |<span class="m">B</span>| = 0 there is no field direction. The page then aligns the atoms along the local vertical, the symmetry axis of the photospheric radiation, which gives the radial-field result with V = 0. The unsaturated Hanle regime between 0 and ~10<sup>−5</sup> G is not modelled.</li>
-              <li>The profiles are emission coefficients of one voxel, not line-of-sight integrals, which is the single-point picture behind inversions such as CLEDB. Observed profiles sum the emission of every voxel along the line of sight, weighted by its emissivity. That mixes field directions, which reduces and rotates the net linear polarization, most strongly where some voxels lie beyond the Van Vleck angle and others do not. It averages <span class="m">B</span><sub>LOS</sub> in V, and weights the density from the 1079/1074 ratio toward the brightest plasma. Occultation and the disk background are not applied to the spectra.</li>
+              <li>The profiles are emission coefficients of one voxel (a single emitting volume element), not line-of-sight integrals, which is the single-point picture behind inversions such as CLEDB. Observed profiles sum the emission of every voxel along the line of sight, weighted by its emissivity. That mixes field directions, which reduces and rotates the net linear polarization, most strongly where some voxels lie beyond the Van Vleck angle and others do not. It averages <span class="m">B</span><sub>LOS</sub> in V, and weights the density from the 1079/1074 ratio toward the brightest plasma. Occultation and the disk background are not applied to the spectra.</li>
             </ul>
           </div>
           <div>
@@ -823,8 +823,8 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
         syncControls(); schedule();
         const fmt = (x) => signed(x, 2);
         fieldNote.textContent = Math.abs(t.xFrom) < 1e-9
-          ? "Ambiguous twin: the voxel is in the plane of the sky, so only B⊥ turns by 180° (the classic azimuth ambiguity). I, Q, U and V of both lines are unchanged."
-          : "Ambiguous twin: the voxel moved along the line of sight from x = " + fmt(t.xFrom) + " to " + fmt(t.xTo) +
+          ? "Ambiguous twin: the point is in the plane of the sky, so only B⊥ turns by 180° (the classic azimuth ambiguity). I, Q, U and V of both lines are unchanged."
+          : "Ambiguous twin: the point moved along the line of sight from x = " + fmt(t.xFrom) + " to " + fmt(t.xTo) +
             " R☉ and B⊥ turned by 180°, keeping B along the line of sight. I, Q, U and V of both lines are unchanged.";
         fieldNote.hidden = false;
         return;
@@ -1096,12 +1096,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       banner.hidden = false;
       banner.innerHTML = STATUS.occulted.icon;
       banner.firstChild.style.color = cssVar("--st-crit");
-      banner.append(document.createTextNode("This voxel is hidden behind the disk. The profiles show what it emits towards the observer."));
+      banner.append(document.createTextNode("This point is hidden behind the disk. The profiles show what it emits towards the observer."));
     } else if (g.visibility === "on-disk") {
       banner.hidden = false;
       banner.innerHTML = STATUS["on-disk"].icon;
       banner.firstChild.style.color = cssVar("--st-warn");
-      banner.append(document.createTextNode("This voxel is seen against the disk. The profiles ignore the photospheric background."));
+      banner.append(document.createTextNode("This point is seen against the disk. The profiles ignore the photospheric background."));
     } else banner.hidden = true;
     plotsEl.classList.toggle("dim", g.visibility === "occulted");
     const fxNow = !!last.fx;
@@ -1109,7 +1109,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
       (fxNow ? "line's Stokes I peak; observation effects on" : "Stokes I peak");
     $("lg-coronal").hidden = !(fxNow && state.fxOverlay);
     const k0 = fxNow && last.kcor && last.kcor[0];
-    $("kcor-readout").textContent = k0 ? "This voxel: continuum " + (100 * k0.I / last.fx.P).toFixed(1) + "% of the 1074.7 nm line peak, pB/I = " +
+    $("kcor-readout").textContent = k0 ? "At this point: continuum " + (100 * k0.I / last.fx.P).toFixed(1) + "% of the 1074.7 nm line peak, pB/I = " +
       (100 * k0.pB / k0.I).toFixed(0).replace("-", "−") + "%." : "";
 
     const I0 = last.lines[0].eps.I;
@@ -1281,7 +1281,7 @@ try {
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setClearColor(0x000000, 0);
 host.prepend(renderer.domElement);
-renderer.domElement.setAttribute("aria-label", "3D view of the Sun, the plasma voxel, its magnetic field and the line of sight. Drag to rotate, scroll to zoom.");
+renderer.domElement.setAttribute("aria-label", "3D view of the Sun, the emitting point, its magnetic field and the line of sight. Drag to rotate, scroll to zoom.");
 renderer.domElement.setAttribute("role", "img");
 
 const labels = new CSS2DRenderer();

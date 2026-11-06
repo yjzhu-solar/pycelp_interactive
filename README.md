@@ -1,10 +1,10 @@
 # Fe XIII Stokes Explorer
 
 An interactive forward model of the polarized emission of the coronal Fe XIII 1074.7 nm and 1079.8 nm lines from a
-single plasma voxel. Move the voxel above the Sun, orient its magnetic field, and watch Stokes I, Q, U and V respond.
+single point, with no line-of-sight integration. Place a parcel of coronal plasma above the Sun, orient its magnetic field, and watch Stokes I, Q, U and V respond.
 
 The page models one point, not a line of sight, which is the same single-point picture behind inversions such as CLEDB.
-Real observations sum the emission of every voxel along the line of sight, weighted by its emissivity. That mixes
+Real observations sum the emission of every point along the line of sight, weighted by its emissivity. That mixes
 densities, temperatures and field directions:
 - linear polarization from differently oriented fields partly cancels;
 - V averages B_LOS;
@@ -56,7 +56,7 @@ The "Observation effects" card, off by default, turns the coronal profiles into 
 "Window" toggle widens the plots from the line to ±20 Å, about the full DKIST/Cryo-NIRSP spectral window. The effects
 apply in the order light meets them:
 
-0. **K corona**: the voxel's own Thomson scattering, as in pyCELP's `Example_PSI_model_synthesis` notebook. It uses
+0. **K corona**: Thomson scattering by the electrons at the same point, as in pyCELP's `Example_PSI_model_synthesis` notebook. It uses
    J00 and ω from `pycelp.allenSolRad`, tabulated in `obs_atlas.js`. It is a flat continuum, polarized tangentially, with
    a scale slider for line-of-sight effects.
 1. **Scattered photospheric light** (sky aureole and instrument): the disk-integrated solar spectrum, with its continuum
