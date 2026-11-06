@@ -322,8 +322,8 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
           <li><span class="sw" style="background: var(--v-r)"></span><span>local vertical</span></li>
           <li><span class="sw" style="background: var(--v-los)"></span><span>line of sight, to observer</span></li>
           <li><span class="sw" style="background: var(--v-ref)"></span><span>+Q reference</span></li>
-          <li><span class="sw" style="background: var(--v-1074); height: 4px"></span><span>1074 polarization</span></li>
-          <li><span class="sw" style="background: var(--v-1079); height: 4px"></span><span>1079 polarization</span></li>
+          <li id="lg3d-1074"><span class="sw" style="background: var(--v-1074); height: 4px"></span><span>1074 polarization</span></li>
+          <li id="lg3d-1079"><span class="sw" style="background: var(--v-1079); height: 4px"></span><span>1079 polarization</span></li>
         </ul>
       </div>
 
@@ -419,12 +419,20 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
             <p id="scale-note">Both lines divided by the 1074.7 nm Stokes I peak</p>
           </div>
           <ul class="legend" aria-label="Spectral lines">
-            <li><span class="sw" style="background: var(--s1074)"></span>Fe XIII 1074.7 nm</li>
-            <li><span class="sw" style="background: var(--s1079)"></span>Fe XIII 1079.8 nm</li>
+            <li id="lg-1074"><span class="sw" style="background: var(--s1074)"></span>Fe XIII 1074.7 nm</li>
+            <li id="lg-1079"><span class="sw" style="background: var(--s1079)"></span>Fe XIII 1079.8 nm</li>
             <li id="lg-coronal" hidden><span class="sw dash"></span>line emission alone</li>
           </ul>
         </div>
         <div class="toolbar">
+          <div class="seg">
+            <span class="lab" id="lab-show">Lines</span>
+            <span class="opts" role="group" aria-labelledby="lab-show">
+              <button type="button" data-show="both" aria-pressed="true">Both</button>
+              <button type="button" data-show="1074" aria-pressed="false">1074.7</button>
+              <button type="button" data-show="1079" aria-pressed="false">1079.8</button>
+            </span>
+          </div>
           <div class="seg">
             <span class="lab" id="lab-norm">Scale by</span>
             <span class="opts" role="group" aria-labelledby="lab-norm">
@@ -677,7 +685,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
 
   // ---------- state ----------
   const DEFAULTS = { height: 0.2, lat: 25, lon: 90, B: 20, inc: 30, azi: -60, logNe: 8.5, vnt: 25, vdop: 0, ref: "radial", norm: "1074", lock: false,
-    win: "line" };
+    win: "line", show: "both" };
   // Observation effects: all off; values from a fit to DKIST/Cryo-NIRSP Fe XIII 1074 nm data (see observe.js).
   const FX_FLAGS = { fxKcor: false, fxStray: false, fxTell: false, fxXtalk: false, fxLsf: false, fxOverlay: true };
   const FX_VALUES = { kScale: 1, sLevel: 3, sB: -40, sBp: 350, sPhi: 0, tScale: 2,
@@ -854,6 +862,8 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
   bindSeg("norm", "norm");
   bindSeg("ref", "ref");
   bindSeg("win", "win");
+  bindSeg("show", "show");
+  function shown(n) { return state.show === "both" || state.show === (n === 0 ? "1074" : "1079"); }
   $("lock").addEventListener("change", function (e) { state.lock = e.target.checked; locked = null; schedule(); });
 
   // ---------- observation effects ----------
@@ -942,6 +952,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     const out = [];
     const ref = last.lines[0].Ipeak;
     last.lines.forEach(function (ln, n) {
+      if (!shown(n)) return;
       const div = state.norm === "own" ? ln.Ipeak : ref;
       const f = (p.pct ? 100 : 1) / div;
       const scaled = function (src) { const y = new Float64Array(src.length); for (let i = 0; i < src.length; i++) y[i] = src[i] * f; return y; };
@@ -1105,9 +1116,12 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     } else banner.hidden = true;
     plotsEl.classList.toggle("dim", g.visibility === "occulted");
     const fxNow = !!last.fx;
-    $("scale-note").textContent = (state.norm === "own" ? "Each line divided by its own " : "Both lines divided by the 1074.7 nm ") +
+    const one = state.show !== "both";
+    $("scale-note").textContent = (state.norm === "own" ? (one ? "Divided by its own " : "Each line divided by its own ")
+      : (one ? "Divided by the 1074.7 nm " : "Both lines divided by the 1074.7 nm ")) +
       (fxNow ? "line's Stokes I peak; observation effects on" : "Stokes I peak");
     $("lg-coronal").hidden = !(fxNow && state.fxOverlay);
+    ["1074", "1079"].forEach(function (k, n) { $("lg-" + k).hidden = !shown(n); $("lg3d-" + k).hidden = !shown(n); });
     const k0 = fxNow && last.kcor && last.kcor[0];
     $("kcor-readout").textContent = k0 ? "At this point: continuum " + (100 * k0.I / last.fx.P).toFixed(1) + "% of the 1074.7 nm line peak, pB/I = " +
       (100 * k0.pB / k0.I).toFixed(0).replace("-", "−") + "%." : "";
@@ -1479,7 +1493,7 @@ let dirty = true;
 const X = new THREE.Vector3(1, 0, 0);
 function v3(a) { return new THREE.Vector3(a[0], a[1], a[2]); }
 
-function update(res) {
+function update(res, ui) {
   const g = res.geo;
   const loc = v3(g.loc), b = v3(g.bhat).normalize(), r = v3(g.frame.r);
   voxel.position.copy(loc); voxelGlow.position.copy(loc);
@@ -1533,8 +1547,9 @@ function update(res) {
   } else { setTube(arcGamma, null); gammaHead.visible = false; tGa.visible = false; }
 
   // linear polarization orientation for each line (length ~ sqrt(L/I))
-  [[bar1074, res.lines[0]], [bar1079, res.lines[1]]].forEach(function ([m, ln]) {
-    if (!hasRef || !(ln.L_I > 1e-6)) { m.visible = false; return; }
+  const show = (ui && ui.show) || "both";
+  [[bar1074, res.lines[0], "1074"], [bar1079, res.lines[1], "1079"]].forEach(function ([m, ln, key]) {
+    if (!hasRef || !(ln.L_I > 1e-6) || (show !== "both" && show !== key)) { m.visible = false; return; }
     const chi = ln.chi * Math.PI / 180;
     const dir = refp.clone().applyAxisAngle(X, chi);
     setBar(m, loc, dir, 0.5 * Math.min(1, Math.max(0.1, Math.sqrt(ln.L_I / 0.25))));
