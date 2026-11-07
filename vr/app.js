@@ -365,9 +365,9 @@ function update3D(res) {
     setBar(m, loc, dir, G.barHalfLength(ln.L_I));
   });
 
-  hintBlob.visible = !usedBlob;
+  hintBlob.visible = !usedBlob && !state.guide;        // the blob sits behind the open guide; hints would print over its text
   hintBlob.position.copy(loc.clone().add(r.clone().multiplyScalar(-0.05)).add(new THREE.Vector3(0, 0, -0.24)));
-  hintTip.visible = !usedTip && !zero;
+  hintTip.visible = !usedTip && !zero && !state.guide;
   hintTip.position.copy(tField.position);
   labelGroup.visible = state.labels;
   if (fieldLines) {
@@ -417,7 +417,7 @@ function onAction(id) {
   }
 }
 const control = new P.ControlPanel(state, { onChange, onAction });
-const guide = new P.GuidePanel({ onClose: function () { state.guide = false; guideP.mesh.visible = false; controlP.dirty = true; } });
+const guide = new P.GuidePanel({ onClose: function () { state.guide = false; guideP.mesh.visible = false; physicsDirty = true; } });
 const specCanvas = P.makeCanvas(P.SPEC.W, P.SPEC.H), specCtx = specCanvas.getContext("2d");
 const telCanvas = P.makeCanvas(P.TEL.W, P.TEL.H), telCtx = telCanvas.getContext("2d");
 
@@ -773,4 +773,4 @@ if (document.fonts && document.fonts.load) {
     '400 22px "Fira Mono"', '500 22px "Fira Mono"'].map((f) => document.fonts.load(f).catch(() => null)))
     .then(function () { panels.forEach((p) => { p.dirty = true; }); labelGroup.children.forEach((s) => s.userData.paint && s.userData.paint()); });
 }
-window.vrApp = { state, get result() { return last; }, panels, world, solar, blob, tip, fieldLines, camera, renderer, layout, viewFrom };
+window.vrApp = { state, get result() { return last; }, panels, world, solar, blob, tip, hints: [hintBlob, hintTip], fieldLines, camera, renderer, layout, viewFrom };
