@@ -189,13 +189,17 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 // ---- the Sun's field lines: a PFSS model for 8 April 2024 (pfss_lines.js, built by build_pfss_lines.py) ----
 const fieldLineData = window.FE13_PFSS_LINES ? G.decodeFieldLines(window.FE13_PFSS_LINES) : null;
+const FIELD_LINE_OPACITY = 0.4;
 const fieldLines = (function () {
   if (!fieldLineData) return null;
   const mesh = function (list, color) {
     const t = G.tubeMesh(list, 0.008, 3), g = new THREE.BufferGeometry();     // about 2.5 mm radius at scale 1
     g.setAttribute("position", new THREE.BufferAttribute(t.positions, 3));
     g.setIndex(new THREE.BufferAttribute(t.indices, 1));
-    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(color) }));
+    // Faint backdrop: no depth written and drawn before every other transparent object, so the field arrow and
+    // the polarization bars (transparent materials at full opacity, see below) always paint over the lines.
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: FIELD_LINE_OPACITY, depthWrite: false }));
+    m.renderOrder = -1;
     solar.add(m);
     return m;
   };
@@ -227,14 +231,14 @@ function setArrow(g, origin, dir, length) {
   g.quaternion.setFromUnitVectors(Y_AXIS, dir.clone().normalize());
 }
 function makeBar(color, radius) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 14), new THREE.MeshBasicMaterial({ color }));
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 14), new THREE.MeshBasicMaterial({ color, transparent: true }));
   solar.add(m); return m;
 }
 function setBar(m, center, dir, half) {
   m.visible = half > 1e-4; if (!m.visible) return;
   m.position.copy(center); m.scale.set(1, 2 * half, 1); m.quaternion.setFromUnitVectors(Y_AXIS, dir.clone().normalize());
 }
-function makeTube(color) { const m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color })); solar.add(m); return m; }
+function makeTube(color) { const m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color, transparent: true })); solar.add(m); return m; }
 function setTube(m, pts, r = 0.009) {
   m.geometry.dispose();
   if (!pts || pts.length < 2) { m.visible = false; m.geometry = new THREE.BufferGeometry(); return; }
@@ -252,7 +256,7 @@ function arcBetween(center, a, b, rad, n = 40) {
   return pts;
 }
 
-const blob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+const blob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
 solar.add(blob);
 const blobGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture([[0, "rgba(255,255,255,0.95)"], [0.25, "rgba(190,230,255,0.4)"], [1, "rgba(0,0,0,0)"]]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
 blobGlow.scale.set(0.5, 0.5, 1);

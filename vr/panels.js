@@ -537,7 +537,7 @@
     telLayerKey = mode;
     const g = telLayer.getContext("2d");
     g.clearRect(0, 0, TEL.W, TEL.map);
-    g.lineWidth = 2.2; g.lineJoin = "round"; g.lineCap = "round"; g.globalAlpha = 0.72;
+    g.lineWidth = 2.2; g.lineJoin = "round"; g.lineCap = "round"; g.globalAlpha = 0.45;
     [["closed", C.closedLine], ["open", C.openLine]].forEach(function ([kind, col]) {
       if (mode !== "all" && mode !== kind) return;
       g.strokeStyle = col;
