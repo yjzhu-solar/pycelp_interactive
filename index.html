@@ -118,6 +118,8 @@ h1 { font: 500 clamp(26px, 3.2vw, 34px)/1.08 var(--font-math); margin: 6px 0 8px
 .caveat[open] summary::after { content: "−"; }
 .caveat summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 .caveat summary b { color: var(--ink); font-weight: 600; }
+.vr-link { margin: 8px 0 0; font-size: 13px; color: var(--ink-3); }
+.vr-link a { color: var(--accent); font-weight: 500; }
 .caveat summary span { color: var(--ink-3); }
 .caveat p { margin: 6px 0 2px; }
 .provenance { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -286,6 +288,7 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
         <summary><b>One point, not a line of sight</b><span>why real observations differ</span></summary>
         <p>Like single-point inversions such as CLEDB, the page treats all the light as coming from one point. A real coronal line of sight crosses plasma with different densities, temperatures and field directions, and the observed profiles are emissivity-weighted sums along it. Linear polarization from differently oriented fields partly cancels, V averages <span class="m">B</span><sub>LOS</sub>, the 1079/1074 ratio leans toward the densest plasma, and the K corona collects every electron. These effects are often not negligible.</p>
       </details>
+      <p class="vr-link"><a href="vr/">The Sun's hidden magnetism</a>: the same model as a virtual-reality visit for the general public (Meta Quest).</p>
     </div>
     <div class="provenance" id="provenance" aria-label="Model details"></div>
   </header>

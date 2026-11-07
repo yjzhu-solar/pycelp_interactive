@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Sun's Hidden Magnetism</title>
+<meta name="description" content="Step into the Sun's corona in virtual reality: move a glowing blob of plasma, turn its magnetic field and watch its light change.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500&family=Fira+Sans+Condensed:wght@600&family=Fira+Sans:wght@400;500;600&display=swap">
+<style>
+/* The page is a window onto space, dark in both colour schemes; the intro card floats over the 3D view. */
+:root {
+  --space: #04060c;
+  --card: rgba(11, 15, 23, 0.88);
+  --rule: rgba(255, 255, 255, 0.12);
+  --ink: #e7ebf1;
+  --ink-2: #a9b2c0;
+  --ink-3: #7c8697;
+  --accent: #f06595;
+  --on-accent: #1c0711;
+  --pink: #ff4f9a;
+  --font-ui: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-label: "Fira Sans Condensed", "Fira Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { margin: 0; height: 100%; }
+body { background: var(--space); color: var(--ink); font: 16px/1.5 var(--font-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; touch-action: none; }
+.intro {
+  position: fixed; left: 16px; top: 16px; box-sizing: border-box; width: min(410px, calc(100% - 32px)); max-height: calc(100% - 32px);
+  overflow: auto; padding: 18px 20px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: 16px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+.eyebrow { margin: 0 0 4px; font: 600 12px/1.2 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+h1 { margin: 0 0 8px; font-size: 25px; line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { margin: 16px 0 4px; font: 600 12px/1.2 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+p { margin: 0 0 8px; }
+.lede { color: var(--ink-2); }
+ul { margin: 0; padding-left: 18px; color: var(--ink-2); }
+li { margin: 2px 0; }
+b.pink { color: var(--pink); font-weight: 600; }
+.vr {
+  display: block; width: 100%; margin: 14px 0 6px; padding: 12px 16px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--accent); color: var(--on-accent); font: 600 17px/1 var(--font-ui);
+}
+.vr:hover { filter: brightness(1.08); }
+.vr[hidden] { display: none; }
+.vr:focus-visible, .ghost:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { font-size: 14px; color: var(--ink-3); margin-top: 6px; }
+details { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 10px; font-size: 14.5px; color: var(--ink-2); }
+summary { cursor: pointer; color: var(--ink); font-weight: 500; }
+details p, details ul { margin-top: 8px; }
+a { color: #8fc1ff; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; font-size: 14.5px; }
+.ghost { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); border-radius: 999px; padding: 6px 14px; font: 500 14px/1 var(--font-ui); cursor: pointer; }
+.ghost:hover { color: var(--ink); border-color: var(--ink-3); }
+.show-intro { position: fixed; left: 16px; top: 16px; background: var(--card); }
+#fallback { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-2); }
+#fallback[hidden] { display: none; }
+@media (max-width: 520px) { h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<section class="intro" id="intro" aria-labelledby="title">
+  <p class="eyebrow">A virtual-reality visit to the Sun's corona</p>
+  <h1 id="title">The Sun's hidden magnetism</h1>
+  <p class="lede">The corona, the Sun's outer atmosphere, is shaped by magnetic fields nobody can see. Glowing iron atoms give them away: their light is polarized, and the field turns that polarization. Move a blob of glowing plasma, turn its magnetic field and watch its light change.</p>
+  <button id="enter-vr" class="vr" hidden>Enter VR</button>
+  <p class="status" id="xr-status" role="status">Checking for a VR headset…</p>
+
+  <h2>In a headset</h2>
+  <p class="lede">Open this page in the Meta Quest Browser and press Enter VR. Pull a trigger or pinch your fingers to grab. A guide inside VR suggests things to try.</p>
+  <h2>On a computer</h2>
+  <ul>
+    <li>Drag the white blob to move it, and the <b class="pink">pink ball</b> to turn the magnetic field.</li>
+    <li>Drag empty space to look around, and scroll to zoom.</li>
+    <li>The panels' sliders and buttons work with the mouse.</li>
+  </ul>
+
+  <details>
+    <summary>About the science</summary>
+    <p>The glow comes from iron atoms that have lost 12 of their 26 electrons (written Fe XIII), in gas at about 1.7 million degrees. They shine in two infrared colours, at 1074.7 and 1079.8 nanometres, which our eyes cannot see.</p>
+    <p>Sunlight from below lines the atoms up, so their light comes out polarized. A magnetic field changes how the atoms line up, so the polarization reveals the field's direction, and a slight circular polarization reveals its strength. Telescopes such as the Daniel K. Inouye Solar Telescope in Hawaiʻi measure this to map the corona's magnetic field.</p>
+    <p>The light here is computed with pyCELP, the same physics researchers use to read real observations. It is simplified in one big way: you see one blob at a time, while a real telescope sees the glow of everything along its line of sight added together.</p>
+  </details>
+  <details>
+    <summary>Credits</summary>
+    <ul>
+      <li>Physics: pyCELP by T. Schad (Schad &amp; Dima 2020, <i>Solar Physics</i> 295, 98, <a href="https://doi.org/10.1007/s11207-020-01669-1" target="_blank" rel="noopener">doi:10.1007/s11207-020-01669-1</a>), redistributed under its <a href="../LICENSE-pycelp.txt" target="_blank" rel="noopener">BSD 3-clause licence</a>.</li>
+      <li>Atomic data: CHIANTI 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).</li>
+      <li>3D graphics: <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. Controller and hand models: the W3C Immersive Web <a href="https://github.com/immersive-web/webxr-input-profiles" target="_blank" rel="noopener">WebXR Input Profiles</a>.</li>
+      <li>Built on the <a href="../">Fe XIII Stokes Explorer</a>, the research version of this model.</li>
+    </ul>
+  </details>
+  <div class="row">
+    <a href="../">For researchers: the Stokes Explorer</a>
+    <button class="ghost" id="hide-intro" type="button">Hide</button>
+  </div>
+</section>
+<button class="ghost show-intro" id="show-intro" type="button" hidden>About this page</button>
+
+<div id="fallback" hidden><p></p></div>
+
+<script>
+(function () {
+  var intro = document.getElementById("intro"), show = document.getElementById("show-intro");
+  document.getElementById("hide-intro").addEventListener("click", function () { intro.hidden = true; show.hidden = false; show.focus(); });
+  show.addEventListener("click", function () { intro.hidden = false; show.hidden = true; });
+})();
+</script>
+<script src="../fe13_see_table.js?v=5"></script>
+<script src="../stokes_model.js?v=5"></script>
+<script src="vr_geom.js?v=1"></script>
+<script src="panels.js?v=1"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>

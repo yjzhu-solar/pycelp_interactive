@@ -32,6 +32,7 @@ line-of-sight geometry, the Q/U reference and the line profiles.
 | `observe.js` | Optional observation effects: scattered photospheric light, telluric absorption, crosstalk, spectral resolution |
 | `obs_atlas.js` | Telluric transmission and solar spectrum within ±25 Å of each line, sampled at 0.01 Å, plus pyCELP's J00 and ω versus height for the K corona (59 kB) |
 | `build_obs_atlas.py` | Regenerates `obs_atlas.js` from the full atlases |
+| `vr/` | "The Sun's hidden magnetism", the virtual-reality version for the public; see below |
 
 The page opens directly from disk as well; it needs an internet connection only for the fonts and three.js.
 
@@ -44,7 +45,7 @@ python build_see_table.py --nlevels 100 --out fe13_see_table_100.js   # ~30 s
 ```
 
 After regenerating a data file or editing a script, bump the `?v=` number on all four `<script src>` tags in
-`index.html`. GitHub Pages lets browsers cache these files for 10 minutes, and the version number makes a refreshed page
+`index.html`, and on the matching tags in `vr/index.html`. GitHub Pages lets browsers cache these files for 10 minutes, and the version number makes a refreshed page
 fetch matching copies.
 
 The script checks the interpolation against direct pyCELP solutions at random off-grid points. The current table
@@ -74,6 +75,40 @@ F corona, atlas velocity shifts, and per-line scattered-light amplitudes.
 ```bash
 python build_obs_atlas.py --atlas-dir /path/to/Cryo_Line_Artifact/atlas
 ```
+
+## Virtual-reality version for the public
+
+`vr/` turns the same model into "The Sun's hidden magnetism", a WebXR experience for public outreach. It runs in the
+Meta Quest Browser (Quest 2, 3 and 3S) and also works with a mouse on a computer. Visitors grab a glowing blob of
+coronal plasma to move it around a 0.6 m Sun, grab the tip of its magnetic field to turn it, and watch the light respond.
+A guide panel suggests four experiments: the 90° flip at the Van Vleck ("magic") angle, a field pointing at Earth,
+zero field, and lower density.
+
+- **Wording** is for a general audience. The spectra panel shows brightness (Stokes I), linear polarization
+  (√(Q² + U²)) and circular polarization (Stokes V), all relative to the 1074.7 nm I peak. The direction of the linear
+  polarization appears as bars at the blob and in a "telescope view" of the plane of the sky.
+- **Physics** is `stokes_model.js` with `fe13_see_table.js`, unchanged. Observation effects are not included.
+- **Polarization bars** have a half-length of 0.6 R☉ × √(min(1, (L/I) / 5%)), longer than the explorer's, so the
+  direction reads at room scale.
+- **Input**: controller triggers or hand-tracking pinches grab the blob, the field tip, sliders, buttons and panel title
+  bars. Grabbing empty space (or the grip button) moves the Sun; two hands resize and turn it.
+
+| File | Contents |
+|---|---|
+| `vr/index.html` | Landing page and "Enter VR" button |
+| `vr/app.js` | three.js scene, WebXR session, controller/hand/mouse interaction |
+| `vr/panels.js` | The guide, controls, spectra and telescope-view panels, drawn on canvases |
+| `vr/vr_geom.js` | Geometry helpers shared by the scene and the panels |
+
+WebXR needs a secure page: an `https://` address, or `localhost`. To try changes on a headset before deploying, enable
+developer mode on the Quest, connect it by USB and run
+
+```bash
+python -m http.server 8000          # in this folder
+adb reverse tcp:8000 tcp:8000
+```
+
+then open http://localhost:8000/vr/ in the Quest Browser.
 
 ## Conventions
 
