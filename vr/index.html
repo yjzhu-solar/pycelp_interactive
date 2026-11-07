@@ -86,12 +86,14 @@ a { color: #8fc1ff; }
     <p>The glow comes from iron atoms that have lost 12 of their 26 electrons (written Fe XIII), in gas at about 1.7 million degrees. They shine in two infrared colours, at 1074.7 and 1079.8 nanometres, which our eyes cannot see.</p>
     <p>Sunlight from below lines the atoms up, so their light comes out polarized. A magnetic field changes how the atoms line up, so the polarization reveals the field's direction, and a slight circular polarization reveals its strength. Telescopes such as the Daniel K. Inouye Solar Telescope in Hawaiʻi measure this to map the corona's magnetic field.</p>
     <p>The light here is computed with pyCELP, the same physics researchers use to read real observations. It is simplified in one big way: you see one blob at a time, while a real telescope sees the glow of everything along its line of sight added together.</p>
+    <p>The thin lines are a model of the Sun's magnetic field on 8 April 2024, the day of the total solar eclipse over North America. It starts from a map of the magnetic field on the Sun's surface, measured by NASA's Solar Dynamics Observatory, and calculates the field above it. This model is simplified too: it leaves out electric currents in the corona and makes every line point straight outward at 3 solar radii from the Sun's centre, where the lines stop. The pink arrow is yours to turn, and it does not follow the model unless you line it up.</p>
   </details>
   <details>
     <summary>Credits</summary>
     <ul>
       <li>Physics: pyCELP by T. Schad (Schad &amp; Dima 2020, <i>Solar Physics</i> 295, 98, <a href="https://doi.org/10.1007/s11207-020-01669-1" target="_blank" rel="noopener">doi:10.1007/s11207-020-01669-1</a>), redistributed under its <a href="../LICENSE-pycelp.txt" target="_blank" rel="noopener">BSD 3-clause licence</a>.</li>
       <li>Atomic data: CHIANTI 11.0.2 (Dere et al. 1997; Dufresne et al. 2024).</li>
+      <li>Field lines: potential-field source-surface model computed with <a href="https://docs.sunpy.org/projects/sunkit-magex/" target="_blank" rel="noopener">sunkit-magex</a>, formerly pfsspy (Stansby, Yeates &amp; Badman 2020, <i>JOSS</i> 5, 2732, <a href="https://doi.org/10.21105/joss.02732" target="_blank" rel="noopener">doi:10.21105/joss.02732</a>), from an SDO/HMI daily synoptic map, courtesy of NASA/SDO and the HMI science team.</li>
       <li>3D graphics: <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>. Controller and hand models: the W3C Immersive Web <a href="https://github.com/immersive-web/webxr-input-profiles" target="_blank" rel="noopener">WebXR Input Profiles</a>.</li>
       <li>Built on the <a href="../">Fe XIII Stokes Explorer</a>, the research version of this model.</li>
     </ul>
@@ -114,14 +116,15 @@ a { color: #8fc1ff; }
 </script>
 <script src="../fe13_see_table.js?v=5"></script>
 <script src="../stokes_model.js?v=5"></script>
-<script src="vr_geom.js?v=1"></script>
-<script src="panels.js?v=1"></script>
+<script src="vr_geom.js?v=2"></script>
+<script src="panels.js?v=2"></script>
+<script src="pfss_lines.js?v=1"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 } }
 </script>
-<script type="module" src="app.js?v=1"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>

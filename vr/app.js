@@ -28,7 +28,7 @@ const model = SM.createModel(window.FE13_SEE_TABLE);
 const DEG = Math.PI / 180;
 const SUN_R = 0.3;                                    // metres per solar radius at scale 1
 const DEFAULTS = { height: 0.2, lat: 25, lon: 90, B: 20, inc: 30, azi: -60, logNe: 8.5, vnt: 25, vdop: 0, ref: "radial",
-  show: "both", cone: true, arcs: true, labels: true, guide: true };
+  show: "both", fieldLines: "all", cone: true, arcs: true, labels: true, guide: true };
 const state = Object.assign({}, DEFAULTS);
 const NPTS = 241;
 
@@ -187,6 +187,27 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
   const l = textSprite(txt, tcol, 0.16); l.position.copy(d.clone().multiplyScalar(L + 0.22));
 });
 
+// ---- the Sun's field lines: a PFSS model for 8 April 2024 (pfss_lines.js, built by build_pfss_lines.py) ----
+const fieldLineData = window.FE13_PFSS_LINES ? G.decodeFieldLines(window.FE13_PFSS_LINES) : null;
+const fieldLines = (function () {
+  if (!fieldLineData) return null;
+  const mesh = function (list, color) {
+    const t = G.tubeMesh(list, 0.008, 3), g = new THREE.BufferGeometry();     // about 2.5 mm radius at scale 1
+    g.setAttribute("position", new THREE.BufferAttribute(t.positions, 3));
+    g.setIndex(new THREE.BufferAttribute(t.indices, 1));
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(color) }));
+    solar.add(m);
+    return m;
+  };
+  const ring = lineFrom(circleYZ(3), COL.rings, 0.22);     // the model's outer edge, where the open lines stop
+  solar.add(ring);
+  const L = window.FE13_PFSS_LINES.labels;
+  const tClosed = textSprite("closed loop", P.C.closedLine, 0.1), tOpen = textSprite("open line", P.C.openLine, 0.1);
+  const out = (a, d) => new THREE.Vector3(a[0], a[1], a[2]).multiplyScalar(1 + d / Math.hypot(a[0], a[1], a[2]));
+  tClosed.position.copy(out(L.closed, 0.12)); tOpen.position.copy(out(L.open, 0.12));
+  return { closed: mesh(fieldLineData.closed, P.C.closedLine), open: mesh(fieldLineData.open, P.C.openLine), ring, tClosed, tOpen };
+})();
+
 // ---- the blob and its field ----
 function makeArrow(color, radius = 0.013, headLen = 0.1, headRad = 0.04) {
   const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.55, metalness: 0, transparent: true });
@@ -284,6 +305,8 @@ const tTilt = textSprite("tilt", P.C.r, 0.1);
 const tCone = textSprite("magic angle 54.7°", P.C.r, 0.09);
 const hintBlob = textSprite("grab the blob", "#ffffff", 0.1);
 const hintTip = textSprite("magnetic field · grab to turn it", P.C.B, 0.1);
+// the two "grab me" hints stay readable whatever is in front of them; they go away after the first grab
+[hintBlob, hintTip].forEach(function (h) { h.material.depthTest = false; h.renderOrder = 5; });
 let usedBlob = false, usedTip = false;
 
 const X = new THREE.Vector3(1, 0, 0);
@@ -347,6 +370,12 @@ function update3D(res) {
   hintTip.visible = !usedTip && !zero;
   hintTip.position.copy(tField.position);
   labelGroup.visible = state.labels;
+  if (fieldLines) {
+    const m = state.fieldLines;
+    fieldLines.closed.visible = fieldLines.tClosed.visible = m === "all" || m === "closed";
+    fieldLines.open.visible = fieldLines.tOpen.visible = m === "all" || m === "open";
+    fieldLines.ring.visible = m !== "off";
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -406,7 +435,7 @@ const specP = makePanel("spectra", specCanvas, 0.6, {
   local: [0.66, -0.12, -0.46], minInterval: 90,
 });
 const telP = makePanel("telescope", telCanvas, 0.36, {
-  draw: () => { if (last) P.drawTelescope(telCtx, { res: last, s: state }); }, local: [-0.6, 0.17, -0.66], minInterval: 90,
+  draw: () => { if (last) P.drawTelescope(telCtx, { res: last, s: state, lines: fieldLineData }); }, local: [-0.6, 0.2, -0.66], minInterval: 90,
 });
 const guideP = makePanel("guide", guide.canvas, 0.4, {
   draw: () => guide.draw(), down: (x, y) => guide.down(x, y), hover: (x, y) => guide.setHover(x, y), local: [0, -0.12, -0.58],
@@ -415,7 +444,7 @@ const guideP = makePanel("guide", guide.canvas, 0.4, {
 // ---------------------------------------------------------------------------------------------------
 // layout: place the Sun and the panels relative to the visitor
 // ---------------------------------------------------------------------------------------------------
-const WORLD_LOCAL = new THREE.Vector3(0, -0.12, -1.3);
+const WORLD_LOCAL = new THREE.Vector3(0, -0.12, -1.5);       // the 3 solar-radius field lines stop short of the panels
 function headPose() {
   if (renderer.xr.isPresenting) {
     const xc = renderer.xr.getCamera();
@@ -744,4 +773,4 @@ if (document.fonts && document.fonts.load) {
     '400 22px "Fira Mono"', '500 22px "Fira Mono"'].map((f) => document.fonts.load(f).catch(() => null)))
     .then(function () { panels.forEach((p) => { p.dirty = true; }); labelGroup.children.forEach((s) => s.userData.paint && s.userData.paint()); });
 }
-window.vrApp = { state, get result() { return last; }, panels, world, solar, blob, tip, camera, renderer, layout, viewFrom };
+window.vrApp = { state, get result() { return last; }, panels, world, solar, blob, tip, fieldLines, camera, renderer, layout, viewFrom };

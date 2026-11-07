@@ -88,6 +88,12 @@ zero field, and lower density.
   (√(Q² + U²)) and circular polarization (Stokes V), all relative to the 1074.7 nm I peak. The direction of the linear
   polarization appears as bars at the blob and in a "telescope view" of the plane of the sky.
 - **Physics** is `stokes_model.js` with `fe13_see_table.js`, unchanged. Observation effects are not included.
+- **Field lines** show a potential-field source-surface (PFSS) model of the corona on 8 April 2024, solved with
+  sunkit-magex from an SDO/HMI daily synoptic frame, with the source surface at 3 R☉. Visitors can show all 185 lines,
+  only the closed loops, only the open lines, or none. They are context only: the blob's field comes from the
+  visitor's own controls, not from this model. The lines are in the same frame as the blob, Heliographic Stonyhurst
+  at the map time, with Earth's B0 of −6.1° left out as elsewhere on the page. The scene has solar north up, so it
+  is turned by the solar P angle relative to sky-oriented eclipse images.
 - **Polarization bars** have a half-length of 0.6 R☉ × √(min(1, (L/I) / 5%)), longer than the explorer's, so the
   direction reads at room scale.
 - **Input**: controller triggers or hand-tracking pinches grab the blob, the field tip, sliders, buttons and panel title
@@ -99,6 +105,17 @@ zero field, and lower density.
 | `vr/app.js` | three.js scene, WebXR session, controller/hand/mouse interaction |
 | `vr/panels.js` | The guide, controls, spectra and telescope-view panels, drawn on canvases |
 | `vr/vr_geom.js` | Geometry helpers shared by the scene and the panels |
+| `vr/pfss_lines.js` | The field lines: 140 closed and 45 open, 8402 points, stored as base64 int16 (68 kB) |
+| `vr/build_pfss_lines.py` | Regenerates `pfss_lines.js`; needs sunpy and sunkit-magex |
+
+To regenerate the field lines:
+
+```bash
+cd vr
+python build_pfss_lines.py /path/to/hmi.Mrdailysynframe_720s.20240408_120000_TAI.data.fits   # about 2 min
+```
+
+The script stops if its coordinates, with B0 added back, disagree with sunpy's Earth-view Heliocentric frame.
 
 WebXR needs a secure page: an `https://` address, or `localhost`. To try changes on a headset before deploying, enable
 developer mode on the Quest, connect it by USB and run
@@ -137,6 +154,8 @@ then have no effect. The unsaturated Hanle regime between 0 and ~10⁻⁵ G is n
   (Schreier et al. 2019, *Atmosphere* 10, 262) from HITRAN line parameters (https://hitran.org).
 - Solar pseudo-transmittance spectrum (version 2020-07-20, disk-integrated): G. C. Toon, JPL,
   https://mark4sun.jpl.nasa.gov/toon/solar/solar_spectrum.html.
+- Coronal field lines (VR page): sunkit-magex, formerly pfsspy (Stansby, Yeates & Badman 2020, *JOSS* 5, 2732,
+  https://doi.org/10.21105/joss.02732), from an SDO/HMI daily synoptic map, courtesy of NASA/SDO and the HMI science team.
 - 3D rendering: three.js, loaded from jsDelivr.
 
 ## Acknowledgement

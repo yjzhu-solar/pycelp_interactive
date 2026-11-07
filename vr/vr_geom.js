@@ -80,8 +80,79 @@
    *  explorer's bars so the direction reads at room scale, and still zero when the light is unpolarized. */
   function barHalfLength(LI) { return 0.6 * Math.min(1, Math.sqrt(Math.max(0, LI) / 0.05)); }
 
+  /** PFSS field lines from pfss_lines.js: {closed: [Float32Array xyz, ...], open: [...]}, in solar radii. */
+  function decodeFieldLines(data) {
+    const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", LUT = new Uint8Array(128);
+    for (let i = 0; i < 64; i++) LUT[B64.charCodeAt(i)] = i;
+    const s = data.xyz;
+    let len = s.length;
+    while (len > 0 && s.charAt(len - 1) === "=") len--;
+    const bytes = new Uint8Array(Math.floor(len * 3 / 4));
+    for (let i = 0, j = 0; i < len; i += 4) {
+      const n = (LUT[s.charCodeAt(i)] << 18) | (LUT[s.charCodeAt(i + 1)] << 12) |
+        ((i + 2 < len ? LUT[s.charCodeAt(i + 2)] : 0) << 6) | (i + 3 < len ? LUT[s.charCodeAt(i + 3)] : 0);
+      if (j < bytes.length) bytes[j++] = (n >> 16) & 255;
+      if (j < bytes.length) bytes[j++] = (n >> 8) & 255;
+      if (j < bytes.length) bytes[j++] = n & 255;
+    }
+    const out = { closed: [], open: [] };
+    let k = 0;
+    data.counts.forEach(function (n, l) {
+      const a = new Float32Array(3 * n);
+      for (let i = 0; i < 3 * n; i++, k += 2) {
+        const v = bytes[k] | (bytes[k + 1] << 8);
+        a[i] = (v >= 32768 ? v - 65536 : v) * data.coordScale;
+      }
+      (l < data.nClosed ? out.closed : out.open).push(a);
+    });
+    return out;
+  }
+
+  /** One merged thin tube per polyline, for a single draw call: {positions, indices}. sides = 3 makes a prism, which
+   *  reads as a solid line in stereo for a sixth of the triangles of a round tube. The ring frame is carried along
+   *  each line by parallel transport so the tube does not twist. Triangles wind outward. */
+  function tubeMesh(lines, radius, sides) {
+    let nv = 0, nt = 0;
+    lines.forEach(function (p) { const n = p.length / 3; nv += n * sides; nt += (n - 1) * sides * 2; });
+    const pos = new Float32Array(3 * nv), idx = nv > 65535 ? new Uint32Array(3 * nt) : new Uint16Array(3 * nt);
+    let v = 0, t = 0;
+    lines.forEach(function (p) {
+      const n = p.length / 3, base = v;
+      let nx = 0, ny = 0, nz = 0;
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(i - 1, 0), b = Math.min(i + 1, n - 1);
+        let tx = p[3 * b] - p[3 * a], ty = p[3 * b + 1] - p[3 * a + 1], tz = p[3 * b + 2] - p[3 * a + 2];
+        const tl = Math.hypot(tx, ty, tz) || 1;
+        tx /= tl; ty /= tl; tz /= tl;
+        if (i === 0) {                         // any direction not along the tangent
+          if (Math.abs(tx) < 0.7) { nx = 1; ny = 0; nz = 0; } else { nx = 0; ny = 1; nz = 0; }
+        }
+        const d = nx * tx + ny * ty + nz * tz;  // keep the previous normal, minus its part along the tangent
+        nx -= d * tx; ny -= d * ty; nz -= d * tz;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        nx /= nl; ny /= nl; nz /= nl;
+        const bx = ty * nz - tz * ny, by = tz * nx - tx * nz, bz = tx * ny - ty * nx;
+        for (let k = 0; k < sides; k++) {
+          const ang = 2 * Math.PI * k / sides, c = radius * Math.cos(ang), s = radius * Math.sin(ang);
+          pos[v * 3] = p[3 * i] + c * nx + s * bx;
+          pos[v * 3 + 1] = p[3 * i + 1] + c * ny + s * by;
+          pos[v * 3 + 2] = p[3 * i + 2] + c * nz + s * bz;
+          v++;
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        for (let k = 0; k < sides; k++) {
+          const a = base + i * sides + k, b = base + i * sides + (k + 1) % sides, c = a + sides, d = b + sides;
+          idx[t++] = a; idx[t++] = b; idx[t++] = c;
+          idx[t++] = b; idx[t++] = d; idx[t++] = c;
+        }
+      }
+    });
+    return { positions: pos, indices: idx };
+  }
+
   root.VRGeom = {
-    modelToThree, threeToModel, placeFromPoint, fieldFromDirection, refInPOS, rotateInPOS,
+    decodeFieldLines, tubeMesh, modelToThree, threeToModel, placeFromPoint, fieldFromDirection, refInPOS, rotateInPOS,
     axisAngleDiff, polVsBperp, lineGrid, skyPosition, barHalfLength, VAN_VLECK: SM.VAN_VLECK,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

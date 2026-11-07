@@ -18,6 +18,7 @@
     accent: "#f06595", control: "#1a212d", controlHi: "#252e3d", onAccent: "#1c0711",
     s1074: "#3987e5", s1079: "#d95926",
     B: "#ff4f9a", Bp: "#ff9cc6", r: "#ffc145", los: "#3ee0c5", ref: "#e8ecf2",
+    closedLine: "#b4a7ff", openLine: "#cdeb7a",
     good: "#2fbf4a", warn: "#fab219", crit: "#e05252", space: "#05080f",
   };
   const FONT = '"Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
@@ -149,6 +150,8 @@
   ];
   const SEGS = [
     { key: "show", label: "Light shown", options: [["both", "Both colours"], ["1074", "1074.7 nm"], ["1079", "1079.8 nm"]] },
+    { key: "fieldLines", label: "The Sun's field lines, 8 April 2024 (model)", options: [["all", "All"], ["closed", "Closed"], ["open", "Open"], ["off", "Off"]],
+      dots: { closed: C.closedLine, open: C.openLine } },
   ];
   const TOGGLES = [["cone", "Magic angle"], ["arcs", "Tilt angle"], ["labels", "Labels"], ["guide", "Guide"]];
   const VIEWS = [["view:earth", "Earth"], ["view:side", "The side"], ["view:north", "Above the pole"]];
@@ -313,17 +316,22 @@
         let fs = 25; ctx.font = (on ? "600 " : "500 ") + fs + "px " + FONT;
         while (fs > 18 && ctx.measureText(txt).width > it.w - 16) { fs--; ctx.font = (on ? "600 " : "500 ") + fs + "px " + FONT; }
         ctx.fillStyle = on ? C.onAccent : C.ink; ctx.textAlign = "center";
-        ctx.fillText(txt, it.x + it.w / 2, it.y + it.h / 2 + 1);
+        const dot = wd.dots && wd.dots[it.v];
+        ctx.fillText(txt, it.x + it.w / 2 + (dot ? 12 : 0), it.y + it.h / 2 + 1);
+        if (dot) {                                // the colour key for the lines in the scene
+          ctx.beginPath(); ctx.arc(it.x + it.w / 2 - ctx.measureText(txt).width / 2 - 8, it.y + it.h / 2, 9, 0, 2 * Math.PI);
+          ctx.fillStyle = dot; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = on ? C.onAccent : C.panel; ctx.stroke();
+        }
         ctx.textAlign = "left";
       });
     });
-    if (this.fps) { ctx.fillStyle = C.ink3; ctx.font = "400 22px " + MONO; ctx.textAlign = "right"; ctx.fillText(this.fps, 748, 1000); ctx.textAlign = "left"; }
+    if (this.fps) { ctx.fillStyle = C.ink3; ctx.font = "400 22px " + MONO; ctx.textAlign = "right"; ctx.fillText(this.fps, 748, 960); ctx.textAlign = "left"; }
   };
 
   // =====================================================================================================
   // Guide
   // =====================================================================================================
-  const GUIDE = { W: 1024, H: 1376 };
+  const GUIDE = { W: 1024, H: 1560 };
   function GuidePanel(opts) {
     this.W = GUIDE.W; this.H = GUIDE.H;
     this.canvas = makeCanvas(this.W, this.H);
@@ -344,6 +352,8 @@
     y = para(ctx, "The Sun's outer atmosphere, the corona, is threaded by magnetic fields we cannot see. Iron atoms there glow in two infrared colours, at 1074.7 and 1079.8 nanometres, invisible to our eyes.", x, y, w, 40);
     y += 8;
     y = para(ctx, "Sunlight from below lines the atoms up, so their light comes out polarized, and the magnetic field turns that polarization. Telescopes such as the Daniel K. Inouye Solar Telescope measure it to map the field.", x, y, w, 40);
+    y += 8;
+    y = para(ctx, "The thin lines are a model of the Sun's magnetic field on 8 April 2024, the day of a total solar eclipse, calculated from maps of the field on its surface. Closed loops return to the Sun. Open lines reach out into space.", x, y, w, 40);
     y += 20;
     ctx.fillStyle = C.ink3; ctx.font = "600 23px " + COND; ctx.fillText("HOW TO PLAY", x, y); y += 44;
     ctx.font = "400 28px " + FONT;
@@ -365,7 +375,8 @@
     [["Tilt the field past 54.7°, the magic angle.", "The polarization bars flip by 90°."],
       ["Point the field straight at Earth.", "The circular polarization is strongest and the bars shrink away."],
       ["Turn the field strength down to zero.", "The light stays polarized, with the bars pointing around the Sun: sunlight alone does that."],
-      ["Turn the plasma density down.", "Fewer collisions jostle the atoms, so the light gets far more polarized, and the 1079.8 nm colour fades."]].forEach(function (t, i) {
+      ["Turn the plasma density down.", "Fewer collisions jostle the atoms, so the light gets far more polarized, and the 1079.8 nm colour fades."],
+      ["Put the blob on a thin line and turn the pink arrow to follow it.", "The bars now show the polarization this one spot would give, if the model is right there."]].forEach(function (t, i) {
       ctx.fillStyle = C.accent; ctx.font = "600 28px " + FONT; ctx.fillText(String(i + 1), x + 2, y);
       ctx.fillStyle = C.ink; ctx.font = "600 28px " + FONT; y = para(ctx, t[0], x + 34, y, w - 34, 38);
       ctx.fillStyle = C.ink2; ctx.font = "400 27px " + FONT; y = para(ctx, t[1], x + 34, y, w - 34, 38);
@@ -515,23 +526,52 @@
   // =====================================================================================================
   // Telescope view: the plane of the sky, orthographic, north up and west right
   // =====================================================================================================
-  const TEL = { W: 1024, H: 1100, map: 1024, fov: 2.75 };
+  const TEL = { W: 1024, H: 1270, map: 1024, fov: 3.15 };
+
+  /** The field lines as the telescope sees them, on a transparent layer that is redrawn only when the choice of
+   *  lines changes. Parts behind the Sun's disk are left out. */
+  let telLayer = null, telLayerKey = null;
+  function fieldLineLayer(lines, mode, cx, cy, k) {
+    if (telLayer && telLayerKey === mode) return telLayer;
+    telLayer = telLayer || makeCanvas(TEL.W, TEL.map);
+    telLayerKey = mode;
+    const g = telLayer.getContext("2d");
+    g.clearRect(0, 0, TEL.W, TEL.map);
+    g.lineWidth = 2.2; g.lineJoin = "round"; g.lineCap = "round"; g.globalAlpha = 0.72;
+    [["closed", C.closedLine], ["open", C.openLine]].forEach(function ([kind, col]) {
+      if (mode !== "all" && mode !== kind) return;
+      g.strokeStyle = col;
+      lines[kind].forEach(function (p) {
+        g.beginPath();
+        let pen = false;
+        for (let i = 0; i < p.length; i += 3) {
+          if (p[i] < 0 && Math.hypot(p[i + 1], p[i + 2]) < 1) { pen = false; continue; }
+          const X = cx + p[i + 1] * k, Y = cy - p[i + 2] * k;
+          if (pen) g.lineTo(X, Y); else g.moveTo(X, Y);
+          pen = true;
+        }
+        g.stroke();
+      });
+    });
+    return telLayer;
+  }
 
   function drawTelescope(ctx, d) {
-    const { res, s } = d;
+    const { res, s, lines } = d;
     const W = TEL.W;
+    const showLines = !!lines && s.fieldLines && s.fieldLines !== "off";
     frame(ctx, W, TEL.H, "What a telescope sees", "the Sun from Earth");
     const top = HDR, S = TEL.map, cx = W / 2, cy = top + S / 2, k = S / (2 * TEL.fov);
     const P = (y, z) => [cx + y * k, cy - z * k];
     ctx.save();
-    rr(ctx, 2, top, W - 4, S - 2, 28); ctx.clip();
+    ctx.beginPath(); ctx.rect(2, top, W - 4, S); ctx.clip();
     ctx.fillStyle = C.space; ctx.fillRect(0, top, W, S);
     let g = ctx.createRadialGradient(cx, cy, k * 0.95, cx, cy, k * 2.6);
     g.addColorStop(0, "rgba(255,190,120,0.34)"); g.addColorStop(0.25, "rgba(255,160,90,0.12)"); g.addColorStop(1, "rgba(80,110,200,0)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, S);
     ctx.setLineDash([7, 9]); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(143,163,196,0.33)";
     ctx.font = "400 21px " + FONT; ctx.fillStyle = "rgba(170,186,212,0.8)"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    [[1.5, "0.5"], [2, "1"], [2.5, "1.5"]].forEach(function ([rad, h]) {
+    [[1.5, "0.5"], [2, "1"], [2.5, "1.5"], [3, "2"]].forEach(function ([rad, h]) {
       ctx.beginPath(); ctx.arc(cx, cy, rad * k, 0, 2 * Math.PI); ctx.stroke();
       const a = -0.62; ctx.fillText(h + " R☉ up", cx + rad * k * Math.cos(a) + 8, cy - rad * k * Math.sin(a));
     });
@@ -540,8 +580,9 @@
     g.addColorStop(0, "#ffdc96"); g.addColorStop(0.7, "#f2a24e"); g.addColorStop(0.93, "#d0661f"); g.addColorStop(1, "#a63c0c");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, k, 0, 2 * Math.PI); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,227,184,0.7)"; ctx.stroke();
+    if (showLines) ctx.drawImage(fieldLineLayer(lines, s.fieldLines, cx, cy - top, k), 0, top);
     ctx.fillStyle = C.ink2; ctx.font = "600 26px " + FONT; ctx.textAlign = "center";
-    ctx.fillText("north", cx, top + 30); ctx.fillText("south", cx, top + S - 150);
+    ctx.fillText("north", cx, top + 30); ctx.fillText("south", cx, top + S - 28);
     ctx.fillText("east", 50, cy); ctx.fillText("west", W - 50, cy);
 
     const geo = res.geo, loc = geo.loc, b = geo.bhat;
@@ -579,8 +620,8 @@
     if (sp.front) { ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = C.space; ctx.stroke(); }
     else { ctx.lineWidth = 4; ctx.strokeStyle = "#ffffff"; ctx.stroke(); }
     ctx.globalAlpha = 1;
-    const ly0 = top + S - 124;               // legend strip
-    ctx.fillStyle = "rgba(5,8,15,0.82)"; ctx.fillRect(0, ly0, W, 124);
+    ctx.restore();
+    const ly0 = top + S;                     // legend below the map
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     let x = 28;
     [[C.s1074, 8, 0], [C.s1079, 5, 1]].forEach(function ([c, w, n]) { if (shown(s, n)) { swatchLine(ctx, x, ly0 + 34, c, w); x += 50; } });
@@ -588,8 +629,15 @@
     swatchLine(ctx, 560, ly0 + 34, C.Bp, 4); ctx.fillStyle = C.ink2; ctx.fillText("magnetic field on the sky", 606, ly0 + 35);
     ctx.fillStyle = C.ink3; ctx.font = "400 23px " + FONT;
     ctx.fillText((sp.front ? "Dot: the blob, on the near side of the Sun" : "Ring: the blob, on the far side of the Sun") +
-      (hidden ? ", hidden from Earth" : ""), 28, ly0 + 88);
-    ctx.restore();
+      (hidden ? ", hidden from Earth" : ""), 28, ly0 + 84);
+    if (showLines) {
+      let lx = 28;
+      [[C.closedLine, "closed loops", "closed"], [C.openLine, "open lines", "open"]].forEach(function ([c, t, kind]) {
+        if (s.fieldLines !== "all" && s.fieldLines !== kind) return;
+        swatchLine(ctx, lx, ly0 + 132, c, 4); ctx.fillStyle = C.ink2; ctx.font = "400 24px " + FONT; ctx.fillText(t, lx + 46, ly0 + 133); lx += 230;
+      });
+      ctx.fillStyle = C.ink3; ctx.font = "400 23px " + FONT; ctx.fillText("Model for 8 April 2024", 700, ly0 + 133);
+    }
   }
 
   root.VRPanels = { C, FONT, MONO, ControlPanel, GuidePanel, drawSpectra, drawTelescope, spectraHit, SPEC, TEL, GUIDE, HDR, makeCanvas, kmText };
