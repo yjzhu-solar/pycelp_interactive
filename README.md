@@ -2,6 +2,8 @@
 
 An interactive forward model of the polarized emission of the coronal Fe XIII 1074.7 nm and 1079.8 nm lines from a
 single point, with no line-of-sight integration. Place a parcel of coronal plasma above the Sun, orient its magnetic field, and watch Stokes I, Q, U and V respond.
+In the 3D view, drag the white point to move it and the pink ball at the tip of the field arrow to turn the field;
+dragging elsewhere rotates the view. The sliders set the same values precisely.
 
 The page models one point, not a line of sight, which is the same single-point picture behind inversions such as CLEDB.
 Real observations sum the emission of every point along the line of sight, weighted by its emissivity. That mixes

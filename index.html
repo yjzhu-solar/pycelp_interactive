@@ -164,6 +164,7 @@ h1 { font: 500 clamp(26px, 3.2vw, 34px)/1.08 var(--font-math); margin: 6px 0 8px
 .legend3d li { display: inline-flex; align-items: center; gap: 7px; }
 .legend3d .sw { width: 18px; height: 3px; border-radius: 2px; flex: none; }
 .legend3d .sw.dash { background: repeating-linear-gradient(90deg, var(--v-bp) 0 4px, transparent 4px 7px) !important; }
+.legend3d .sw.dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 4px; }
 
 /* ---------- controls ---------- */
 .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -320,13 +321,15 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
           <div class="fallback" id="scene-fallback" hidden><p>The 3D view could not start (WebGL or the three.js library from cdn.jsdelivr.net is unavailable). The spectra on the right still update.</p></div>
         </div>
         <ul class="legend3d" aria-label="3D legend">
+          <li><span class="sw dot" style="background: #ffffff"></span><span>emitting point: drag to move</span></li>
+          <li><span class="sw dot" style="background: var(--v-b)"></span><span>drag to turn <span class="m">B</span></span></li>
           <li><span class="sw" style="background: var(--v-b)"></span><span><span class="m">B</span> field direction</span></li>
           <li><span class="sw dash"></span><span><span class="m">B</span><sub>⊥</sub> on the plane of sky</span></li>
           <li><span class="sw" style="background: var(--v-r)"></span><span>local vertical</span></li>
           <li><span class="sw" style="background: var(--v-los)"></span><span>line of sight, to observer</span></li>
           <li><span class="sw" style="background: var(--v-ref)"></span><span>+Q reference</span></li>
-          <li id="lg3d-1074"><span class="sw" style="background: var(--v-1074); height: 4px"></span><span>1074 polarization</span></li>
-          <li id="lg3d-1079"><span class="sw" style="background: var(--v-1079); height: 4px"></span><span>1079 polarization</span></li>
+          <li id="lg3d-1074"><span class="sw" style="background: var(--v-1074); height: 4px"></span><span>1074.7 nm polarization</span></li>
+          <li id="lg3d-1079"><span class="sw" style="background: var(--v-1079); height: 4px"></span><span>1079.8 nm polarization</span></li>
         </ul>
       </div>
 
@@ -1208,7 +1211,11 @@ details.about summary:focus-visible { outline: 2px solid var(--accent); outline-
     if (window.scene3d) window.scene3d.update(last, state);
   }
   window.addEventListener("scene3d-ready", function () { if (last) window.scene3d.update(last, state); });
-  window.stokesApp = { state: state, get result() { return last; } };
+  window.stokesApp = {
+    state: state, limits: model.limits, get result() { return last; },
+    /** Used by the 3D view's drag handles: change state values, then refresh the controls and the plots. */
+    set: function (patch) { Object.assign(state, patch); syncControls(); schedule(); },
+  };
 
   // ---------- CSV ----------
   $("copy").addEventListener("click", function () {
@@ -1298,7 +1305,7 @@ try {
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setClearColor(0x000000, 0);
 host.prepend(renderer.domElement);
-renderer.domElement.setAttribute("aria-label", "3D view of the Sun, the emitting point, its magnetic field and the line of sight. Drag to rotate, scroll to zoom.");
+renderer.domElement.setAttribute("aria-label", "3D view of the Sun, the emitting point, its magnetic field and the line of sight. Drag the white point to move it or the pink ball to turn the field; drag elsewhere to rotate, scroll to zoom.");
 renderer.domElement.setAttribute("role", "img");
 
 const labels = new CSS2DRenderer();
@@ -1484,6 +1491,10 @@ const bar1074 = makeBar(COL.l1074, 0.013);
 const bar1079 = makeBar(COL.l1079, 0.008);
 const arcTheta = makeTube(COL.r), arcBigTheta = makeTube(COL.los), arcGamma = makeTube(COL.ref);
 const gammaHead = cone(COL.ref, 0.022, 0.06); scene.add(gammaHead);
+// handle at the tip of the field arrow: drag it to turn B
+const tipBall = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 16),
+  new THREE.MeshStandardMaterial({ color: COL.B, emissive: COL.B, emissiveIntensity: 0.6, roughness: 0.4, metalness: 0 }));
+scene.add(tipBall);
 
 const tB = label('B', ""); tB.element.style.color = css("--v-b");
 const tTh = label('θ<sub>B</sub>', ""); tTh.element.style.color = css("--v-r");
@@ -1511,8 +1522,10 @@ function update(res, ui) {
   setArrow(aB, loc, b, zero ? 0 : LB);
   setArrow(aR, loc, r, 0.66);
   setArrow(aLOS, loc, X, 0.7);
+  tipBall.visible = !zero;
+  tipBall.position.copy(loc.clone().add(b.clone().multiplyScalar(LB)));
   tB.visible = !zero;
-  tB.position.copy(loc.clone().add(b.clone().multiplyScalar(LB + 0.07)));
+  tB.position.copy(loc.clone().add(b.clone().multiplyScalar(LB + 0.17)));
 
   // plane-of-sky projection of B
   const bp = new THREE.Vector3(0, b.y, b.z);
@@ -1575,6 +1588,97 @@ viewButtons.forEach(function (btn) {
 controls.addEventListener("start", function () { tween = null; viewButtons.forEach((o) => o.setAttribute("aria-pressed", "false")); });
 controls.addEventListener("change", function () { dirty = true; });
 
+// ---------- dragging the point and the tip of the field arrow ----------
+// The point moves in the plane through it that faces the camera, so it stays under the cursor; in the Observer view
+// it slides across the sky at a fixed depth along the line of sight. The tip slides on the sphere the arrow sweeps,
+// also under the cursor, on the half (towards or away from the camera) where it was grabbed; past the sphere's edge it
+// follows the edge. A press anywhere else still rotates the view.
+const RAD = Math.PI / 180;
+const raycaster = new THREE.Raycaster();
+let hover = null, drag = null;
+function pointerRay(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
+  return raycaster.ray;
+}
+/** The handle under the pointer, "point", "tip" or null, judged in screen pixels so it works at any zoom. */
+function pick(e) {
+  const r = renderer.domElement.getBoundingClientRect(), tol = e.pointerType === "touch" ? 30 : 16;
+  let best = null;
+  [["point", voxel], ["tip", tipBall]].forEach(function ([k, obj]) {
+    if (!obj.visible) return;
+    const p = obj.position.clone().project(camera);
+    if (p.z > 1) return;
+    const d = Math.hypot((p.x + 1) / 2 * r.width - (e.clientX - r.left), (1 - p.y) / 2 * r.height - (e.clientY - r.top));
+    if (d > tol) return;
+    if (!best || d < best.d - 4 || (Math.abs(d - best.d) <= 4 && p.z < best.z)) best = { k, d, z: p.z };   // a tie goes to the nearer one
+  });
+  return best ? best.k : null;
+}
+function showHandles() {
+  const k = drag ? drag.k : hover;
+  voxelGlow.scale.setScalar(k === "point" ? 0.66 : 0.42);
+  tipBall.scale.setScalar(k === "tip" ? 1.4 : 1);
+  renderer.domElement.style.cursor = drag ? "grabbing" : hover ? "grab" : "";
+  dirty = true;
+}
+const round = (v, d) => Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+function dragTo(e) {
+  const app = window.stokesApp, ray = pointerRay(e);
+  if (drag.k === "point") {
+    const hit = ray.intersectPlane(drag.plane, new THREE.Vector3());
+    if (!hit) return;
+    const p = hit.add(drag.offset), r = p.length();
+    if (!(r > 1e-6)) return;
+    const lim = app.limits.height;
+    app.set({ height: round(Math.min(Math.max(r - 1, lim[0]), lim[1]), 3),
+      lat: round(Math.asin(Math.min(1, Math.max(-1, p.z / r))) / RAD, 1), lon: round(Math.atan2(p.y, p.x) / RAD, 1) });
+    return;
+  }
+  const c = drag.loc, oc = ray.origin.clone().sub(c), b = oc.dot(ray.direction), disc = b * b - (oc.lengthSq() - drag.R * drag.R);
+  const t = disc >= 0 ? -b + (drag.front ? -1 : 1) * Math.sqrt(disc) : -b;
+  const v = ray.at(t, new THREE.Vector3()).sub(c);
+  if (v.lengthSq() < 1e-12) return;
+  const s = app.state, a = window.StokesModel.localAngles(window.StokesModel.localFrame(s.lat, s.lon), [v.x, v.y, v.z]);
+  app.set({ inc: round(a.inc, 1), azi: round(a.azi, 1) });
+}
+// capture phase on the viewport, so a press on a handle never reaches OrbitControls
+host.addEventListener("pointerdown", function (e) {
+  if (e.target !== renderer.domElement || e.button !== 0 || drag || !window.stokesApp || !window.stokesApp.set) return;
+  const k = pick(e);
+  if (!k) return;
+  e.stopPropagation(); e.preventDefault();
+  tween = null;
+  if (k === "point") {
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()), voxel.position);
+    const hit = pointerRay(e).intersectPlane(plane, new THREE.Vector3());
+    drag = { k, id: e.pointerId, plane, offset: hit ? voxel.position.clone().sub(hit) : new THREE.Vector3() };
+  } else {
+    const loc = voxel.position.clone();
+    drag = { k, id: e.pointerId, loc, R: tipBall.position.distanceTo(loc),
+      front: tipBall.position.clone().sub(loc).dot(camera.position.clone().sub(loc)) >= 0 };
+  }
+  try { host.setPointerCapture(e.pointerId); } catch (err) { /* synthetic event */ }
+  showHandles();
+}, true);
+host.addEventListener("pointermove", function (e) {
+  if (drag) { if (e.pointerId === drag.id) { e.stopPropagation(); dragTo(e); } return; }
+  if (e.target !== renderer.domElement || e.buttons) return;           // no hover changes while orbiting
+  const k = e.pointerType === "mouse" ? pick(e) : null;
+  if (k !== hover) { hover = k; showHandles(); }
+}, true);
+function endDrag(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  e.stopPropagation();
+  drag = null;
+  try { host.releasePointerCapture(e.pointerId); } catch (err) { /* not captured */ }
+  hover = e.pointerType === "mouse" ? pick(e) : null;
+  showHandles();
+}
+host.addEventListener("pointerup", endDrag, true);
+host.addEventListener("pointercancel", endDrag, true);
+renderer.domElement.addEventListener("pointerleave", function () { if (!drag && hover) { hover = null; showHandles(); } });
+
 function resize() {
   const w = host.clientWidth, h = host.clientHeight;
   if (!w || !h) return;
@@ -1609,7 +1713,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.scene3d = { update };
+window.scene3d = { update, camera, canvas: renderer.domElement };
 window.dispatchEvent(new Event("scene3d-ready"));
 </script>
 </body>
